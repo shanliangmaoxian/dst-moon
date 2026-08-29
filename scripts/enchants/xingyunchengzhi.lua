@@ -237,6 +237,9 @@ function _G.Moon_DoDiceRoll(player)
         player._xycz_dice_updated:set(not player._xycz_dice_updated:value())
     end
 
+    -- 广播骰子结果（供其他附魔/系统监听，如：无意识的恋恋 roll出5和14）
+    player:PushEvent("moon_dice_roll", { value = roll })
+
     if last_roll >= 80 and roll >= 80 then
         local success, stone = _G.pcall(_G.HHSpawnStoneById, "Legend_XYCZ")
         if success and stone and player.components.inventory then

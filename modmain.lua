@@ -114,6 +114,7 @@ modimport("scripts/enchants/laoshi")
 modimport("scripts/enchants/xiaohudie")
 modimport("scripts/enchants/hanyue")      -- 寒月公主
 modimport("scripts/enchants/yufenfen")    -- 雨纷纷
+modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
 -- modimport("scripts/enchants/lihuaxue")
 -- modimport("scripts/enchants/xinshidi")
 
