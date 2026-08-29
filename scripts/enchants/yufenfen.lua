@@ -66,7 +66,21 @@ AddPrefabPostInit("world", function(inst)
                     owner._yufenfen_own_stronggrip = true
                 end
 
-                -- ============ 无视地形（地形减速免疫 + 不触发陷阱） ============
+                -- ============ 无视地形（穿墙/水上行走/无碰撞障碍，参考 dst-little-pine woodieability） ============
+                -- 删除物理碰撞体：可穿过障碍、可在水上行走（DST 原版函数）
+                if owner.Physics and _G.RemovePhysicsColliders then
+                    _G.RemovePhysicsColliders(owner)
+                    owner._yufenfen_removed_physics = true
+                end
+                -- 防溺水：水上行走不会淹死
+                if not owner.components.drownable then
+                    owner:AddComponent("drownable")
+                end
+                if owner.components.drownable then
+                    owner._yufenfen_old_drownable = owner.components.drownable.enabled
+                    owner.components.drownable.enabled = false
+                end
+                -- 附带：地形减速免疫 + 不触发陷阱
                 local loco = owner.components.locomotor
                 if loco then
                     owner._yufenfen_old_groundmult = loco.groundspeedmultiplier
@@ -252,7 +266,17 @@ AddPrefabPostInit("world", function(inst)
                     owner._yufenfen_own_stronggrip = nil
                 end
 
-                -- 无视地形
+                -- 无视地形：恢复物理碰撞 + 溺水状态
+                if owner._yufenfen_removed_physics then
+                    if _G.ChangeToCharacterPhysics then
+                        _G.ChangeToCharacterPhysics(owner)
+                    end
+                    owner._yufenfen_removed_physics = nil
+                end
+                if owner.components.drownable and owner._yufenfen_old_drownable ~= nil then
+                    owner.components.drownable.enabled = owner._yufenfen_old_drownable
+                    owner._yufenfen_old_drownable = nil
+                end
                 local loco = owner.components.locomotor
                 if loco then
                     if owner._yufenfen_old_groundmult ~= nil then
