@@ -641,4 +641,20 @@ configuration_options = {
         options = { {description = "在服务器mod配置中添加", data = ""} },
         default = "",
     },
+
+    AddTitle("性能设置"),
+    {
+        name = "TRANSFORM_LIMIT",
+        label = "自动转换附魔重试次数上限",
+        hover = "最多自动转换次数的上限",
+        options = {
+            { description = "10", data = 200 },
+            { description = "100", data = 200 },
+            { description = "200", data = 200 },
+            { description = "500", data = 500 },
+            { description = "1000", data = 1000 },
+            { description = "不限制", data = "INF" },
+        },
+        default = 500,
+    },
 }

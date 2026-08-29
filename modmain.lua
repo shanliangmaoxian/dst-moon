@@ -115,6 +115,9 @@ modimport("scripts/enchants/laoshi")
 -- modimport("scripts/enchants/lihuaxue")
 -- modimport("scripts/enchants/xinshidi")
 
+modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
+
+
 -- ------------------------------------------------------------------
 -- 4. UI 界面 (仅当任一相关功能启用时加载)
 -- ------------------------------------------------------------------
@@ -156,3 +159,14 @@ AddPrefabPostInit("world", function(inst)
         end
     end
 end)
+
+
+-- -- WARNING: 上线前请注释，仅在开发时使用
+-- -- WARNING: 上线前请注释，仅在开发时使用
+-- -- WARNING: 上线前请注释，仅在开发时使用
+-- GLOBAL.c_reload = function()
+--     GLOBAL.StartNextInstance({
+--         reset_action = GLOBAL.RESET_ACTION.LOAD_SLOT,
+--         save_slot = GLOBAL.SaveGameIndex:GetCurrentSaveSlot()
+--     })
+-- end
