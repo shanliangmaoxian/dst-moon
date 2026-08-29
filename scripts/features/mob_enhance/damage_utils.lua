@@ -13,9 +13,10 @@ local sweep_counter = 0
 -- 目标是否携带「死亡之舞」效果（德·忍耐 附带，存于 HH 附魔框架效果系统）
 -- HH 框架的 API 全局名是被混淆的梗字符串（Ciallo～(∠・ω< )⌒★），硬编码脆弱：
 -- 框架不存在 / 改名 / 调用出错时一律视为没有 → 不限流（pcall 兜底，绝不崩溃）
+-- 注意必须用 rawget 读取：该全局 key 可能不存在，裸 _G[...] 会触发 strict.lua 未声明报错
 local function HasDanceOfDeath(target)
     if not target then return false end
-    local hh_api = _G["Ciallo～(∠・ω< )⌒★"]
+    local hh_api = _G.rawget(_G, "Ciallo～(∠・ω< )⌒★")
     if not (hh_api and hh_api.HasEffect) then return false end
     local ok, res = pcall(hh_api.HasEffect, target, "DanceOfDeath")
     return ok and res == true
