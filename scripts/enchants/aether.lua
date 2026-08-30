@@ -1,5 +1,18 @@
 local containers = require("containers")
-local HH_LANGUAGE, HH_EQUIP_BUFF_LIST
+local Widget = require("widgets/widget")
+
+local HH_EQUIP_BUFF_LIST
+
+local ok, hh_enchant = pcall(function() return require("enums/hh_enchant") end)
+if not ok or not hh_enchant then return end
+HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
+
+local ok, HH_LANGUAGE =
+    pcall(function() return require("enums/hh_language") end)
+if not ok or not HH_LANGUAGE then return end
+
+local ok, HH_UTILS = pcall(function() return require("utils/hh_utils") end)
+if not ok or not HH_UTILS then return end
 
 -- 小月亮 附魔：以太
 -- 增强拆除法杖的功能
@@ -73,6 +86,53 @@ function update_skin_item(player, target)
         is_hh_type(target, "table") then
         player.components.hh_skin:ToolChangeSkin(target)
     end
+end
+local GEM_TYPES = {
+    "redgem", "bluegem", "purplegem", "greengem", "orangegem", "yellowgem",
+    "opalpreciousgem"
+}
+
+-- 核心函数：检查并删除指定点周围地上每种宝石各一个
+function RemoveOneOfEachGem(x, y, z, radius, gem_types)
+    -- 找出所有地上的宝石（排除背包/容器中的）
+    local all_gems = TheSim:FindEntities(x, y, z, radius, {"gem"}, {"INLIMBO"})
+
+    -- 每个 prefab 
+    local gems = {}
+    for _, ent in ipairs(all_gems) do
+        local prefab = ent.prefab
+        if prefab and not gems[prefab] then gems[prefab] = ent end
+    end
+
+    -- 检查是否每种宝石都有
+    local all_present = true
+    for _, gem_type in pairs(gem_types) do
+        if not gems[gem_type] then return end
+    end
+
+    -- 删除
+    for _, gem_prefab in ipairs(gem_types) do gems[gem_prefab]:Remove() end
+
+    return true
+end
+
+local ActionLookAt_old = ACTIONS.LOOKAT.fn
+ACTIONS.LOOKAT.fn = function(act, ...)
+    local target = act.target or act.invobject
+
+    if target and target.prefab then
+        if target.prefab == "hh_staff_dis" then
+            local x, y, z = target.Transform:GetWorldPosition()
+            local hh_equip = target.components and target.components.hh_equip
+            if hh_equip and not target:HasTag("moon_hh_effect_aether") and
+                RemoveOneOfEachGem(x, y, z, 5, GEM_TYPES) then
+                TheWorld:PushEvent("ms_sendlightningstrike", Vector3(x, y, z))
+                hh_equip:AddEquipBuff(EFFECT_NAME)
+            end
+        end
+    end
+
+    return ActionLookAt_old(act, ...)
 end
 
 -- 附魔石没有提供依据 effect 的完整更新方式，客户端的视觉状态无法有效的和它的数据状态保持一致，改用重新创建的方式来替换附魔石
@@ -200,6 +260,14 @@ local function auto_transform_stone(essence_provider, stone, player)
     end
 end
 
+local EQUIP_BLACK_TAG = {
+    "INLIMBO", "NOCLICK", "irreplaceable", "knockbackdelayinteraction",
+    "event_trigger", "minesprung", "mineactive", "catchable", "fire", "light",
+    "spider", "cursed", "paired", "bundle", "heatrock", "deploykititem",
+    "boatbuilder", "singingshell", "archive_lockbox", "simplebook",
+    "furnituredecor", "flower", "gemsocket", "structure", "donotautopick"
+}
+
 -- 就地转换附魔石
 local function transform_stones_inplace(inst, target, pos, caster)
     if is_hh_type(pos, "table") and pos["x"] and pos["y"] and pos["z"] then
@@ -237,30 +305,20 @@ local noop = function() end
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
-    local ok, hh_enchant = pcall(function()
-        return require("enums/hh_enchant")
-    end)
-    if not ok or not hh_enchant then return end
-    HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
-
-    local ok, hh_language = pcall(function()
-        return require("enums/hh_language")
-    end)
-    if not ok or not hh_language then return end
-    HH_LANGUAGE = hh_language
-
     local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
     GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
         old_add_special_equip_effect(effect_id, data)
         HH_EQUIP_BUFF_LIST[effect_id]["slots"] = data.slots or 1
+        HH_EQUIP_BUFF_LIST[effect_id]["obtain_desc"] = data.obtain_desc
     end
 
     GLOBAL.AddSpecialEquipEffect(EFFECT_NAME, {
         name = "以太",
         client_text = "以\n太",
-        desc = "增强拆除法杖的功能",
-        check_desc = "附魔在拆除法杖后内部放入以下道具解锁新功能：\n【月岩】: 消耗月岩进行将高级附魔石转成普通附魔石，一个月岩一次\n【水晶道具】: 自动转换，消耗里面的水晶道具对地上的附魔石进行附魔石转换，直到无法转换或水晶道具耗尽为止",
+        desc = "增强拆除法杖的功能：\n【月岩】: 消耗月岩将高级附魔石转成普通附魔石，每次1月岩\n【水晶道具】: 消耗水晶道具对周围附魔石进行自动转换",
+        check_desc = "仅能附魔在拆解法杖上",
         can_add = false,
+        obtain_desc = "若拆解法杖周围地上存在 7 色宝石各一个，检查它即可附魔上去",
         only_one = true,
         is_special = false,
         slots = 0,
@@ -457,5 +515,226 @@ AddComponentPostInit("hh_equip", function(self, inst)
         local last_reduce_index = math["random"](1, #self["equip_buff_list"])
         self:UpdateReduceBuffIndex(last_reduce_index)
         return true, "附魔成功!!!"
+    end
+end)
+
+-- 排序函数 根据id倒序 新词条在前面
+local function sortById(a, b)
+    local aValue = a["value"]
+    local bValue = b["value"]
+    -- 检查两个元素是否都有id
+    if aValue["id"] and bValue["id"] then
+        return aValue["id"] > bValue["id"]
+        -- 只有a有id
+    elseif aValue["id"] then
+        return true
+        -- 只有b有id
+    elseif bValue["id"] then
+        return false
+        -- 两个元素都没有id
+    else
+        return false
+    end
+end
+local effect_rare_str = "只能从合成台较低概率合成出来"
+
+local function GetAllEquipBuff()
+    local hh_copy = HH_UTILS:HHCopyTable(HH_EQUIP_BUFF_LIST)
+    local hh_table = {}
+    -- 将键值对转换为数组格式
+    local itemList = {}
+    for key, value in pairs(hh_copy) do
+        table["insert"](itemList, {["key"] = key, ["value"] = value})
+    end
+    -- 使用table.sort进行排序
+    table["sort"](itemList, sortById)
+    for i, v in ipairs(itemList) do
+        if HH_UTILS:IsHHType(v, "table") and
+            HH_UTILS:IsHHType(v["value"], "table") then
+            local buff_config = v["value"]
+            -- 套装属性不展示
+            if not buff_config["is_suit"] then
+                local buff_name = buff_config["name"] or "词条未定义"
+                local buff_small_name = buff_config["client_text"] or "空"
+                local buff_desc_format =
+                    buff_config["desc"] or "描述未定义"
+                local buff_color = {128 / 255, 138 / 255, 135 / 255, 1}
+                if buff_config["client_color"] then
+                    buff_color = buff_config["client_color"]
+                elseif not buff_config["can_add"] then
+                    buff_color = {255 / 255, 97 / 255, 0 / 255, 1}
+                end
+                local range_value = buff_config["value_range"] and
+                                        HH_UTILS:Template("{{min}}~{{max}}",
+                                                          buff_config["value_range"]) or
+                                        "无取值范围"
+                local buff_desc = buff_desc_format
+                if range_value ~= "无取值范围" then
+                    buff_desc = string["format"](buff_desc_format, range_value)
+                end
+                local buff_is_one = buff_config["only_one"] and
+                                        "只允许存在一条" or
+                                        "可重复附魔"
+                local buff_can_get = buff_config["can_add"] and
+                                         "可以通过普通附魔获取" or
+                                         "精英/boss掉落的专属附魔石/武器包裹"
+                if buff_config["only_compound"] then
+                    buff_can_get = effect_rare_str
+                end
+                if buff_config["ui_from_desc"] then
+                    buff_can_get = tostring(buff_config["ui_from_desc"])
+                end
+                local buff_check_desc = "无"
+                if buff_config["check_desc"] then
+                    buff_check_desc = tostring(buff_config["check_desc"])
+                end
+                table["insert"](hh_table, {
+                    ["id"] = v.key,
+                    ["name"] = buff_name,
+                    ["small_name"] = buff_small_name,
+                    ["desc"] = buff_desc,
+                    ["color"] = buff_color,
+                    ["range_value"] = range_value,
+                    ["is_one"] = buff_is_one,
+                    ["can_add"] = buff_can_get,
+                    ["check_desc"] = buff_check_desc
+                })
+            end
+        end
+    end
+    return hh_table
+end
+
+local hh_offset = 20
+local main_size_x, main_size_y = 800, 500
+
+AddClassPostConstruct("widgets/hh_help_ui", function(self)
+    function self:CreateEffectUi()
+        self:CreateTitle("词条属性")
+        local father_ui = self["hh_main"]["main_ui"]
+        local all_effect = GetAllEquipBuff()
+        ----------------------------------------------------------------------------------------------
+        local sub_root = Widget()
+        local start_x, start_y = 0, 0
+        local sub_ui_y = 0, 0
+        -- x轴分两段
+        local sub_ui_x_left, sub_ui_x_right = 0, 0
+        local image_size = 40
+        for i, v in ipairs(all_effect) do
+            local child_x, child_y = image_size / 2, start_y - image_size / 2
+            local start_left = true
+            if i % 2 ~= 0 then
+                start_left = false
+                child_x = image_size / 2 + main_size_x / 2 - 30
+            end
+            sub_root["hh_image_" .. i] =
+                HH_UTILS:HHCreateImageUi(sub_root,
+                                         "images/hh_icon/hh_status.xml",
+                                         "hh_status.tex", Vector3(0, 0, 1),
+                                         image_size, image_size, v["color"])
+            sub_root["hh_image_" .. i]:SetPosition(child_x, child_y, 1)
+            sub_root["hh_image_" .. i]["stone_image"] =
+                HH_UTILS:HHCreateImageUi(
+                    sub_root["hh_image_" .. i], "images/hh_icon/hh_items.xml",
+                    "hh_effect_stone.tex", Vector3(0, 0, 1), image_size * 0.8,
+                    image_size * 0.8)
+            sub_root["hh_image_" .. i]["hh_client_text"] =
+                HH_UTILS:HHCreateTextUi(sub_root["hh_image_" .. i],
+                                        Vector3(0, 0, 1),
+                                        tostring(v["small_name"]), nil,
+                                        image_size / 2, true)
+
+            -- 来源
+            local from_str = HH_EQUIP_BUFF_LIST[v.id] and HH_EQUIP_BUFF_LIST[v.id].obtain_desc or v["can_add"]
+            local can_add_color = {1, 1, 1, 1}
+            if from_str == effect_rare_str then
+                can_add_color = {1, 0, 0, 1}
+            end
+            sub_root["hh_image_" .. i]["hh_str_ui"] =
+                HH_UTILS:CreateMoreTextUi(
+                    sub_root["hh_image_" .. i], {
+                        {
+                            ["str"] = v["name"],
+                            ["color"] = {255 / 255, 102 / 255, 0 / 255, 1},
+                            ["scale"] = 25
+                        },
+                        {
+                            ["str"] = "描述:" .. v["desc"],
+                            ["color"] = nil,
+                            ["scale"] = 20
+                        },
+                        {
+                            ["str"] = "唯一性:" .. v["is_one"],
+                            ["color"] = nil,
+                            ["scale"] = 20
+                        }, {
+                            ["str"] = "来源:" .. from_str,
+                            ["color"] = can_add_color,
+                            ["scale"] = 20
+                        },
+                        {
+                            ["str"] = "前置条件:" .. v["check_desc"],
+                            ["color"] = nil,
+                            ["scale"] = 20
+                        }, {["str"] = " ", ["color"] = nil, ["scale"] = 20}
+                    }, 3)
+            local hh_str_ui_x, hh_str_ui_y =
+                sub_root["hh_image_" .. i]["hh_str_ui"]["max_x"],
+                sub_root["hh_image_" .. i]["hh_str_ui"]["max_y"]
+            sub_root["hh_image_" .. i]["hh_str_ui"]:SetPosition(
+                image_size / 2 + 2, image_size / 2, 1)
+            if start_left then
+                sub_ui_x_left = math["max"](image_size + hh_str_ui_x + 2,
+                                            sub_ui_x_left)
+                start_y = start_y - math["max"](hh_str_ui_y, image_size)
+                sub_ui_y = sub_ui_y + math["max"](hh_str_ui_y, image_size)
+            else
+                sub_ui_x_right = math["max"](image_size + hh_str_ui_x + 2,
+                                             sub_ui_x_right)
+            end
+        end
+        local sub_w, sub_h = sub_ui_x_left + sub_ui_x_right + 70, 380
+        father_ui["hh_info_ui"] = HH_UTILS:CreateTrueScrollArea(father_ui,
+                                                                sub_root, sub_w,
+                                                                sub_h, sub_ui_y,
+                                                                65, 3)
+        father_ui["hh_info_ui"]:SetPosition(-main_size_x / 2 + hh_offset + 40,
+                                            -sub_h / 2, 1)
+        father_ui["hh_info_ui"]["up_button"]:SetTextures(
+            "images/quagmire_recipebook.xml",
+            "quagmire_recipe_scroll_arrow_hover.tex")
+        father_ui["hh_info_ui"]["up_button"]:SetScale(0.35)
+        father_ui["hh_info_ui"]["down_button"]:SetTextures(
+            "images/quagmire_recipebook.xml",
+            "quagmire_recipe_scroll_arrow_hover.tex")
+        father_ui["hh_info_ui"]["down_button"]:SetScale(-0.35)
+        father_ui["hh_info_ui"]["scroll_bar_line"]:SetTexture(
+            "images/quagmire_recipebook.xml", "quagmire_recipe_scroll_bar.tex")
+        father_ui["hh_info_ui"]["scroll_bar_line"]:SetScale(0.75)
+        father_ui["hh_info_ui"]["position_marker"]:SetTextures(
+            "images/quagmire_recipebook.xml",
+            "quagmire_recipe_scroll_handle.tex")
+        father_ui["hh_info_ui"]["position_marker"]["image"]:SetTexture(
+            "images/quagmire_recipebook.xml",
+            "quagmire_recipe_scroll_handle.tex")
+        father_ui["hh_info_ui"]["position_marker"]:SetScale(0.3)
+        ---------------------------------------------------------------------------------------
+        HH_UTILS:HookFocusCamera(father_ui["hh_info_ui"])
+        -- local all_suit = GetAllSuitBuff(self["owner"])
+        -- local sub_suit_root = Widget()
+        -- sub_suit_root["hh_ui"] = HH_UTILS:CreateMoreTextUi(sub_suit_root, all_suit, 3)
+        -- local sub_suit_ui_x, sub_suit_ui_y = sub_suit_root["hh_ui"]["max_x"], sub_suit_root["hh_ui"]["max_y"]
+        -- local sub_suit_w, sub_suit_h = sub_suit_ui_x + 3, 380
+        -- father_ui["hh_suit_ui"] = HH_UTILS:CreateTrueScrollArea(father_ui, sub_suit_root, sub_suit_w, sub_suit_h, sub_suit_ui_y, 25, 3)
+        -- father_ui["hh_suit_ui"]:SetPosition(main_size_x / 2 - sub_suit_w - hh_offset * 3, -sub_suit_h / 2, 1)
+        -- father_ui["hh_suit_ui"]["up_button"]:SetTextures("images/quagmire_recipebook.xml", "quagmire_recipe_scroll_arrow_hover.tex")
+        -- father_ui["hh_suit_ui"]["up_button"]:SetScale(0.35)
+        -- father_ui["hh_suit_ui"]["down_button"]:SetTextures("images/quagmire_recipebook.xml", "quagmire_recipe_scroll_arrow_hover.tex")
+        -- father_ui["hh_suit_ui"]["down_button"]:SetScale(-0.35)
+        -- father_ui["hh_suit_ui"]["scroll_bar_line"]:SetTexture("images/quagmire_recipebook.xml", "quagmire_recipe_scroll_bar.tex")
+        -- father_ui["hh_suit_ui"]["scroll_bar_line"]:SetScale(0.75)
+        -- father_ui["hh_suit_ui"]["position_marker"]:SetTextures("images/quagmire_recipebook.xml", "quagmire_recipe_scroll_handle.tex")
+        -- father_ui["hh_suit_ui"]["position_marker"]["image"]:SetTexture("images/quagmire_recipebook.xml", "quagmire_recipe_scroll_handle.tex")
+        -- father_ui["hh_suit_ui"]["position_marker"]:SetScale(0.3)
     end
 end)
