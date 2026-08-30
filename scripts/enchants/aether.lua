@@ -153,7 +153,7 @@ local function auto_transform_stone(essence_provider, stone, player)
                 ["data_effect"] = shown_effect_name,
                 ["data_essence"] = cosume_count + current_expend_essence
             }))
-            break;
+            break
         elseif random_num <= 5 then
             stone_effect_newly = rand_pick_on_pool(_G["HHGetGoodEquipEffect"]())
             -- 增加播报
@@ -171,7 +171,7 @@ local function auto_transform_stone(essence_provider, stone, player)
                 ["data_effect"] = shown_effect_name,
                 ["data_essence"] = cosume_count + current_expend_essence
             }))
-            break;
+            break
         else
             stone_effect_newly = rand_pick_on_pool(_G["HHGetComEquipEffect"]())
         end
@@ -249,6 +249,12 @@ AddPrefabPostInit("world", function(inst)
     if not ok or not hh_language then return end
     HH_LANGUAGE = hh_language
 
+    local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
+    GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
+        old_add_special_equip_effect(effect_id, data)
+        HH_EQUIP_BUFF_LIST[effect_id]["slots"] = data.slots or 1
+    end
+
     GLOBAL.AddSpecialEquipEffect(EFFECT_NAME, {
         name = "以太",
         client_text = "以\n太",
@@ -257,6 +263,7 @@ AddPrefabPostInit("world", function(inst)
         can_add = false,
         only_one = true,
         is_special = false,
+        slots = 0,
         client_color = {0.8, 0, 0.8, 1},
         check_equip_can_add = function(inst)
             if inst and inst.prefab == "hh_staff_dis" then
@@ -328,4 +335,127 @@ AddPrefabPostInit("hh_staff_dis", function(inst)
             old_spell_fn(inst, target, pos, doer)
         end)
 
+end)
+
+AddComponentPostInit("hh_equip", function(self, inst)
+    local old_set_equip_buff_limit = self.SetEquipBuffLimit;
+    self.SetEquipBuffLimit = function(self, buff_num, force)
+        old_set_equip_buff_limit(self, buff_num)
+        if force then self.equip_buff_limit = buff_num end
+    end
+
+    -- 计算占用槽位
+    function self:GetUsedSlots()
+        local effect_list = self.equip_buff_list
+
+        local used_slots = 0
+
+        for i, effect in pairs(effect_list) do
+            local effect_name = effect.name
+            local effect_config = HH_EQUIP_BUFF_LIST[effect_name] or {}
+            local used_slot = effect_config.slots or 1
+
+            used_slots = used_slots + used_slot
+        end
+
+        return used_slots
+    end
+
+    local old_add_equip_buff = self.CanAddEquipBuff
+    function self:CanAddEquipBuff(buff_name, buff_value)
+        if not self.equip_buff_limit or
+            not is_hh_type(self.equip_buff_list, "table") then
+            return false
+        end
+
+        local effect_config = HH_EQUIP_BUFF_LIST[buff_name] or {}
+        local advanced_slots = effect_config.slots or 1
+
+        -- 计算占用槽位
+        local effect_list = self.equip_buff_list
+
+        local used_slots = self:GetUsedSlots()
+
+        return used_slots + advanced_slots <= self.equip_buff_limit
+    end
+
+    function self:GetBuffDebugString()
+        local debug_format = "%s/%s"
+        return string.format(debug_format, self:GetUsedSlots(),
+                             self.equip_buff_limit)
+    end
+
+    -- 无法通过增量的方式来更改原函数的行为，将原来的逻辑复制了一份。CanAddEquipBuff 需
+    -- 要传递添加进来的附魔效果，才能完整判断是否能继续添加，例如词条已经满了，但仍能添加
+    -- slots 为 0 的附魔。
+    function self:AddEquipBuff(buff_name, buff_value)
+        local add_buff_name = nil
+        local can_add_buff = self:CanAddEquipBuff(buff_name, buff_value)
+        if not can_add_buff then
+            return false, "词条已满,无法增加词条!!!"
+        end
+        -- 校验词条是否可以新增
+        if buff_name then
+            add_buff_name = buff_name
+            if not HH_EQUIP_BUFF_LIST[buff_name] then
+                return false, "无法识别的词条 附魔失败!!!"
+            end
+
+            if HH_EQUIP_BUFF_LIST[buff_name]["check_equip_can_add"] then
+                local check_equip_can_add, check_result =
+                    HH_EQUIP_BUFF_LIST[buff_name]["check_equip_can_add"](
+                        self["inst"])
+                if not check_equip_can_add then
+                    return false, check_result or
+                               "该词条不允许附魔在当前装备上 附魔失败！！！"
+                end
+            end
+            -- 校验词条唯一性
+            if HH_EQUIP_BUFF_LIST[buff_name]["only_one"] then
+                for key, value in ipairs(self["equip_buff_list"]) do
+                    if value and value["name"] == buff_name then
+                        return false,
+                               "此词条只允许存在一条 附魔失败！！！"
+                    end
+                end
+            end
+        else
+            -- 查询可新增的词条
+            local all_can_add_buffs = self:GetAllBuffByEquip()
+            if not all_can_add_buffs or #all_can_add_buffs < 1 then
+                return false, "没有可以新增的词条!!!"
+            end
+            local all_buff_length = #all_can_add_buffs
+            local hh_random_num = math["random"](1, all_buff_length)
+            add_buff_name = all_can_add_buffs[hh_random_num]
+        end
+        local buff_config = HH_EQUIP_BUFF_LIST[add_buff_name]
+        -- 套装词条增加校验
+        if buff_config["is_suit"] and self:HasSuitEffect() then
+            return false, "已经存在套装词条,无法附魔"
+        end
+        local random_buff_value = nil
+        if buff_value then
+            random_buff_value = buff_value
+        else
+            if buff_config["value_range"] and buff_config["value_range"]["max"] and
+                buff_config["value_range"]["min"] then
+                random_buff_value = math["random"](
+                                        buff_config["value_range"]["min"],
+                                        buff_config["value_range"]["max"])
+            end
+        end
+        table["insert"](self["equip_buff_list"], {
+            ["name"] = add_buff_name,
+            ["value"] = random_buff_value
+        })
+        if HH_EQUIP_BUFF_LIST[add_buff_name]["start_fn"] then
+            HH_EQUIP_BUFF_LIST[add_buff_name]["start_fn"](self["inst"],
+                                                          random_buff_value)
+        end
+        -- 防止清除词条回档刷词条
+        local last_reduce_index = math["random"](1, #self["equip_buff_list"])
+        self:UpdateReduceBuffIndex(last_reduce_index)
+        return true, "附魔成功!!!"
+    end
 end)
