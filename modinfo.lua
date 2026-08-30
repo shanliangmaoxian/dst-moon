@@ -3,7 +3,7 @@ description = "提取自特定Mod的召唤功能：小月亮按钮及召唤面�
 author = "九月"
 version = "1.19.3"
 api_version = 10
-priority = 1000
+priority = -1
 dst_compatible = true
 all_clients_require_mod = true
 client_only_mod = false
@@ -640,5 +640,21 @@ configuration_options = {
         hover = "单一配置项配置全部方案。\n格式: 物品,数量,角色|物品,数量,角色:::方案2...\n| 分隔同方案的多个物品，::: 分隔多个方案，角色填 all（所有人）或角色prefab（如 wilson）\n示例: cutstone,10,all|goldnugget,5,wilson:::spear,1,all",
         options = { {description = "在服务器mod配置中添加", data = ""} },
         default = "",
+    },
+
+    AddTitle("性能设置"),
+    {
+        name = "TRANSFORM_LIMIT",
+        label = "自动转换附魔重试次数上限",
+        hover = "最多自动转换次数的上限",
+        options = {
+            { description = "10", data = 200 },
+            { description = "100", data = 200 },
+            { description = "200", data = 200 },
+            { description = "500", data = 500 },
+            { description = "1000", data = 1000 },
+            { description = "不限制", data = "INF" },
+        },
+        default = 500,
     },
 }
