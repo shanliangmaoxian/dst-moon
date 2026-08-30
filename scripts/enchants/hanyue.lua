@@ -160,5 +160,5 @@ AddPrefabPostInit("world", function(inst)
         end,
     })
 
-    _G.Moon_RegisterEnchantDrop("Legend_HANYUE", 0.001) -- 掉落率降至1/1000
+    _G.Moon_RegisterEnchantDrop("Legend_HANYUE", 0) -- 掉落率0
 end)
