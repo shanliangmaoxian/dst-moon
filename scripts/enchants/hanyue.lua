@@ -1,6 +1,6 @@
 -- 小月亮 附魔：寒月公主
 -- 攻击冻结目标(永冻)：每秒扣2%最大生命(有托托莉则2%噩梦真伤)
--- 每次攻击附带300真伤 | 暴击率+30% 爆伤+100% | 雪花特效
+-- 每次攻击附带666真伤 | 暴击率+66% 爆伤+666% | 雪花特效
 -- 托托莉检测参考一枝独秀(yzdx)
 
 local _G = GLOBAL
@@ -10,9 +10,9 @@ if not CFG.ENABLE_MORE_ENCHANTS then return end
 
 local FROST_DURATION = 8    -- 永冻持续时间(秒)，攻击会刷新
 local FROST_PERCENT = 0.02  -- 每秒扣血百分比(2%最大生命)
-local TRUE_DMG = 300        -- 每次攻击附带的真伤
-local CRIT_RATE = 30        -- 暴击率(暴击率+30%)
-local CRIT_EFFECT = 100     -- 爆伤(额外+100%)
+local TRUE_DMG = 666        -- 每次攻击附带的真伤
+local CRIT_RATE = 66        -- 暴击率(暴击率+66%)
+local CRIT_EFFECT = 666     -- 爆伤(额外+666%)
 
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
@@ -20,7 +20,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HANYUE", {
         name = "寒月公主",
         client_text = "寒月\n公主",
-        desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦真伤 | 暴击+30% 爆伤+100%\n每次攻击附带300真伤",
+        desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦真伤 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤",
         check_desc = "寒月照，万物霜！",
         can_add = false,
         only_one = true,
@@ -160,5 +160,5 @@ AddPrefabPostInit("world", function(inst)
         end,
     })
 
-    _G.Moon_RegisterEnchantDrop("Legend_HANYUE", 0.01)
+    _G.Moon_RegisterEnchantDrop("Legend_HANYUE", 0.001) -- 掉落率降至1/1000
 end)
