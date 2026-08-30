@@ -36,6 +36,7 @@ CFG.MOB_DEFENSE_CAP             = GetModConfigData("MOB_DEFENSE_CAP")
 CFG.MOB_DEFENSE_FREQ            = GetModConfigData("MOB_DEFENSE_FREQ")
 CFG.MOB_DEFENSE_SCOPE           = GetModConfigData("MOB_DEFENSE_SCOPE") or "all"
 CFG.ENABLE_MORE_ENCHANTS    = GetModConfigData("ENABLE_MORE_ENCHANTS")
+CFG.remove_enchant          = GetModConfigData("remove_enchant") or {}
 CFG.ENABLE_QUICK_CHAT       = GetModConfigData("ENABLE_QUICK_CHAT")
 CFG.ENABLE_MOD_BROWSER      = GetModConfigData("ENABLE_MOD_BROWSER")
 CFG.ENABLE_DEATH_STATS      = GetModConfigData("ENABLE_DEATH_STATS")
