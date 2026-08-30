@@ -260,6 +260,22 @@ local function auto_transform_stone(essence_provider, stone, player)
     end
 end
 
+-- 自动转换附魔石
+local function transform_to_common_stone(currency_provider, stone, player,
+                                         currency_type, cosume_amount)
+    if not currency_provider.components or
+        not currency_provider.components.container then return end
+    if not stone or stone.prefab ~= "hh_effect_stone" then return end
+    if is_common_effect(stone.hh_effect) then return end
+
+    local currency_container = currency_provider.components.container
+    local enough = currency_container:Has(currency_type, cosume_amount)
+    local stone_effect_newly = rand_pick_on_pool(_G["HHGetComEquipEffect"]())
+
+    currency_container:ConsumeByName(currency_type, cosume_amount)
+    replace_stone(stone, stone_effect_newly, player)
+end
+
 local EQUIP_BLACK_TAG = {
     "INLIMBO", "NOCLICK", "irreplaceable", "knockbackdelayinteraction",
     "event_trigger", "minesprung", "mineactive", "catchable", "fire", "light",
@@ -269,7 +285,7 @@ local EQUIP_BLACK_TAG = {
 }
 
 -- 就地转换附魔石
-local function transform_stones_inplace(inst, target, pos, caster)
+local function transform_stones_inplace(inst, target, pos, caster, transformer)
     if is_hh_type(pos, "table") and pos["x"] and pos["y"] and pos["z"] then
         -- 先拆除附魔石
         local stone_entities = TheSim:FindEntities(pos["x"], pos["y"], pos["z"],
@@ -282,8 +298,8 @@ local function transform_stones_inplace(inst, target, pos, caster)
             local common_pool = HHGetComEquipEffect()
             for i, stone in ipairs(stone_entities) do
                 if stone and stone.prefab == "hh_effect_stone" then
-                    if stone.hh_effect and is_common_effect(stone.hh_effect) then
-                        auto_transform_stone(inst, stone, caster)
+                    if stone.hh_effect then
+                        transformer(inst, stone, caster)
                     end
                 end
             end
@@ -292,11 +308,14 @@ local function transform_stones_inplace(inst, target, pos, caster)
 end
 
 local handle_map = {
-    -- TODO: 月岩，把非普通附魔石转成普通附魔石
-    ["moonrocknugget"] = function(inst, target, pos, doer) end,
+    ["moonrocknugget"] = function(inst, target, pos, doer)
+        transform_stones_inplace(inst, target, pos, doer, function (inst, stone, caster)
+            transform_to_common_stone(inst, stone, caster, "moonrocknugget", 1)
+        end)
+    end,
     -- 水晶道具，自动转换
     ["hh_essence"] = function(inst, target, pos, doer)
-        transform_stones_inplace(inst, target, pos, doer)
+        transform_stones_inplace(inst, target, pos, doer, auto_transform_stone)
     end
 }
 
@@ -645,7 +664,9 @@ AddClassPostConstruct("widgets/hh_help_ui", function(self)
                                         image_size / 2, true)
 
             -- 来源
-            local from_str = HH_EQUIP_BUFF_LIST[v.id] and HH_EQUIP_BUFF_LIST[v.id].obtain_desc or v["can_add"]
+            local from_str = HH_EQUIP_BUFF_LIST[v.id] and
+                                 HH_EQUIP_BUFF_LIST[v.id].obtain_desc or
+                                 v["can_add"]
             local can_add_color = {1, 1, 1, 1}
             if from_str == effect_rare_str then
                 can_add_color = {1, 0, 0, 1}
@@ -667,7 +688,8 @@ AddClassPostConstruct("widgets/hh_help_ui", function(self)
                             ["str"] = "唯一性:" .. v["is_one"],
                             ["color"] = nil,
                             ["scale"] = 20
-                        }, {
+                        },
+                        {
                             ["str"] = "来源:" .. from_str,
                             ["color"] = can_add_color,
                             ["scale"] = 20
