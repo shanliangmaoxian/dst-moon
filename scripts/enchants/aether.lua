@@ -32,6 +32,12 @@ function get_player_data_by_key(player, item_key)
     return tonumber(player.components.hh_data:GetParamsValue(item_key)) or 0
 end
 
+function dodelta_player_data_by_key(player, item_key, value)
+    if not (player.components and player.components.hh_data) and
+        is_hh_type(item_key, "string") then return 0 end
+    player.components.hh_data:DoDeltaParamValue(item_key, value)
+end
+
 function add_log(log_type, log_msg)
     if not (TheWorld.components and TheWorld.components.hh_world_log) then
         return
@@ -107,7 +113,6 @@ local function auto_transform_stone(essence_provider, stone, player)
     local player_pos = player:GetPosition()
 
     local spawn_new_stone = nil
-    local has_good = false
     local base_expend_essence_num = 5
     -- 已经消耗的水晶小人数量
     local current_expend_essence = get_player_data_by_key(player,
@@ -176,16 +181,20 @@ local function auto_transform_stone(essence_provider, stone, player)
     essence_container:ConsumeByName("hh_essence", cosume_count)
     replace_stone(stone, stone_effect_newly, player)
 
+    -- roll 到普通附魔石的次数
+    local lose_count = is_common_effect(stone_effect_newly) and try_count - 1 or
+                           try_count
+
     -- 登记一下抽奖次数-用于发送特殊蛋奖励
     if player.components and player.components.hh_data then
-        if has_good then
-            player.components.hh_data:SetParamsValue("draw_lots_num_rare", 0)
-        else
-            player.components.hh_data:DoDeltaParamValue("draw_lots_num_rare", 1)
+        -- 根据原算法，最多 100 次否则会丢失信息
+        while lose_count > 0 do
+            dodelta_player_data_by_key(player, "draw_lots_num_rare",
+                                       math.min(lose_count, 100))
+            lose_count = lose_count - 100
         end
         -- 记录一下消耗的水晶小人 后续可能会做数据统计相关
-        player.components.hh_data:DoDeltaParamValue("expend_essence",
-                                                    cosume_count)
+        dodelta_player_data_by_key(player, "expend_essence", cosume_count)
     end
 end
 
@@ -221,24 +230,22 @@ local handle_map = {
     end
 }
 
+local noop = function() end
+
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
-    inst:DoTaskInTime(0, function()
-        local ok, hh_enchant = pcall(function()
-            return require("enums/hh_enchant")
-        end)
-        if not ok or not hh_enchant then return end
-        HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
+    local ok, hh_enchant = pcall(function()
+        return require("enums/hh_enchant")
     end)
+    if not ok or not hh_enchant then return end
+    HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
 
-    inst:DoTaskInTime(0, function()
-        local ok, hh_language = pcall(function()
-            return require("enums/hh_language")
-        end)
-        if not ok or not hh_language then return end
-        HH_LANGUAGE = hh_language
+    local ok, hh_language = pcall(function()
+        return require("enums/hh_language")
     end)
+    if not ok or not hh_language then return end
+    HH_LANGUAGE = hh_language
 
     GLOBAL.AddSpecialEquipEffect(EFFECT_NAME, {
         name = "以太",
@@ -256,7 +263,13 @@ AddPrefabPostInit("world", function(inst)
             return false, "仅能附魔在拆除法杖中"
         end,
         on_equip_fn = function(inst, owner, value) end,
-        un_equip_fn = function(inst, owner, value) end
+        un_equip_fn = function(inst, owner, value) end,
+        start_fn = function(inst, value)
+            inst:AddTag("moon_hh_effect_aether")
+        end,
+        end_fn = function(inst, value)
+            inst:RemoveTag("moon_hh_effect_aether")
+        end
     })
 
     _G.Moon_RegisterEnchantDrop(EFFECT_NAME, 0)
@@ -270,7 +283,8 @@ AddPrefabPostInit("world", function(inst)
         if host_prefab == "hh_staff_dis" then
             local old_itemtestfn = container.itemtestfn
             container.itemtestfn = function(self, item, slot)
-                if item and handle_map[item.prefab] then
+                local activating = self.inst:HasTag("moon_hh_effect_aether")
+                if activating and item and handle_map[item.prefab] then
                     return true
                 end
                 return old_itemtestfn and old_itemtestfn(self, item, slot)
@@ -278,6 +292,7 @@ AddPrefabPostInit("world", function(inst)
         end
 
     end
+
 end)
 
 -- 拓展拆除法杖的功能
@@ -291,22 +306,24 @@ AddPrefabPostInit("hh_staff_dis", function(inst)
     inst.components.spellcaster:SetSpellFn(
         function(inst, target, pos, doer)
             if not inst.components or not inst.components.container then
-                return
+                return old_spell_fn(inst, target, pos, doer)
             end
 
-            local handle_completed = false
+            if not inst.components.hh_equip or
+                not inst.components.hh_equip:HasEffectByName(EFFECT_NAME) then
+                return old_spell_fn(inst, target, pos, doer)
+            end
+
             local first_slot_item = inst.components.container:GetItemInSlot(1)
             local transfer =
                 first_slot_item and handle_map[first_slot_item.prefab] or nil
 
             if transfer then
                 transfer(inst, target, pos, doer)
-                handle_completed = true
+                return
             end
 
-            if not handle_completed then
-                old_spell_fn(inst, target, pos, doer)
-            end
+            old_spell_fn(inst, target, pos, doer)
         end)
 
 end)
