@@ -35,10 +35,10 @@ AddPrefabPostInit("world", function(inst)
                     local is_solo = true
                     for _, v in ipairs(GLOBAL.AllPlayers) do
                         if v:IsValid() then
-                            -- 检测托托莉
+                            -- 检测托托莉（角色 prefab 为 "totooria"，兼容常见写法）
                             if not has_tutu then
-                                local prefab = v.prefab or ""
-                                if prefab:find("tutuoli") or prefab:find("totori") or prefab:find("torori") then
+                                local prefab = (v.prefab or ""):lower()
+                                if prefab:find("totooria") or prefab:find("tutuoli") or prefab:find("totori") or prefab:find("torori") then
                                     has_tutu = true
                                 end
                             end
@@ -88,20 +88,24 @@ AddPrefabPostInit("world", function(inst)
                     if not _G.Moon_HasEffect(owner, "yzdx") then return end
                     local target = data and data.target
                     if not target or not target:IsValid() then return end
-                    if not target.components.health or target.components.health:IsDead() then return end
+                    local health = target.components.health
+                    if not health or health:IsDead() then return end
 
                     local mult = owner._yzdx_cache_mult or 1
                     local tutu = owner._yzdx_cache_tutu
+                    local max_hp = health.maxhealth or 100
+                    local dmg = max_hp * 0.01 * mult
 
-                    if not tutu then
-                        -- 没有托托莉：1%血量伤害（撕裂）
-                        local max_hp = target.components.health.maxhealth or 100
-                        local bleed_dmg = max_hp * 0.01 * mult
-                        if target.components.health.DoHHDelta then
-                            target.components.health:DoHHDelta(-bleed_dmg, owner, nil)
+                    if tutu then
+                        -- 有托托莉：1%最大生命噩梦伤害（真伤，无视防御）
+                        if health.DoHHDelta then
+                            health:DoHHDelta(-dmg, owner, nil)
                         else
-                            target.components.health:DoDelta(-bleed_dmg, false, nil)
+                            health:DoDelta(-dmg, false, nil)
                         end
+                    else
+                        -- 没有托托莉：1%血量伤害（撕裂，走普通扣血）
+                        health:DoDelta(-dmg, false, nil)
                     end
                 end
                 owner:ListenForEvent("onattackother", owner._yzdx_attack_handler)
@@ -112,23 +116,8 @@ AddPrefabPostInit("world", function(inst)
                     local hh = owner.components.hh_player
                     if not hh then return end
 
+                    -- 刷新缓存（托托莉/独狼）并同步吸血/增强buff
                     _G.pcall(owner._yzdx_refreshCache, owner)
-                    local tutu = owner._yzdx_cache_tutu
-                    local mult = owner._yzdx_cache_mult or 1
-
-                    -- 更新 trueDamageNum (托托莉)
-                    if tutu then
-                        hh:ReduceEffectValueByKey("trueDamageNum", owner._yzdx_old_truedmg or 0)
-                        local new_td = 1 * mult
-                        hh:AddEffectValueByKey("trueDamageNum", new_td)
-                        owner._yzdx_old_truedmg = new_td
-                    else
-                        if owner._yzdx_old_truedmg then
-                            hh:ReduceEffectValueByKey("trueDamageNum", owner._yzdx_old_truedmg)
-                            owner._yzdx_old_truedmg = nil
-                        end
-                    end
-
                     owner._yzdx_refreshBuffs()
                 end
 
@@ -153,11 +142,6 @@ AddPrefabPostInit("world", function(inst)
                 end
                 if owner._yzdx_removeBuffs then
                     owner._yzdx_removeBuffs()
-                end
-                local hh = owner.components.hh_player
-                if hh and owner._yzdx_old_truedmg then
-                    hh:ReduceEffectValueByKey("trueDamageNum", owner._yzdx_old_truedmg)
-                    owner._yzdx_old_truedmg = nil
                 end
                 owner._yzdx_effect_applied = nil
                 owner._yzdx_inited = nil

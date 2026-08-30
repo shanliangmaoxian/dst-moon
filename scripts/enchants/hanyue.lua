@@ -70,7 +70,7 @@ AddPrefabPostInit("world", function(inst)
                     end
                 end
 
-                -- 攻击触发：300真伤 + 永冻标记 + 雪花特效
+                -- 攻击触发：666真伤 + 永冻标记 + 雪花特效
                 owner._hanyue_attack_handler = function(attacker, data)
                     if not _G.Moon_HasEffect(owner, "hanyue") then return end
                     local target = data and data.target
@@ -83,8 +83,8 @@ AddPrefabPostInit("world", function(inst)
                     local has_totori = false
                     for _, v in ipairs(_G.AllPlayers) do
                         if v:IsValid() then
-                            local prefab = v.prefab or ""
-                            if prefab:find("tutuoli") or prefab:find("totori") or prefab:find("torori") then
+                            local prefab = (v.prefab or ""):lower()
+                            if prefab:find("totooria") or prefab:find("tutuoli") or prefab:find("totori") or prefab:find("torori") then
                                 has_totori = true
                                 break
                             end
@@ -92,7 +92,7 @@ AddPrefabPostInit("world", function(inst)
                     end
                     owner._hanyue_has_totori = has_totori
 
-                    -- 每次攻击附带300真伤(无视护甲)
+                    -- 每次攻击附带666真伤(无视护甲)
                     if health.DoHHDelta then
                         health:DoHHDelta(-TRUE_DMG, owner, nil)
                     else
