@@ -20,7 +20,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HANYUE", {
         name = "寒月公主",
         client_text = "寒月\n公主",
-        desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦真伤 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤",
+        desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦伤害 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤",
         check_desc = "寒月照，万物霜！",
         can_add = false,
         only_one = true,
@@ -35,6 +35,11 @@ AddPrefabPostInit("world", function(inst)
                 owner._hanyue_inited = true
                 owner._hanyue_marks = {}
                 owner._hanyue_has_totori = false
+
+                -- 确保 ttl_wanly_damage 组件存在（托托莉噩梦伤害组件，由托托莉mod提供）
+                if not owner.components.ttl_wanly_damage then
+                    _G.pcall(function() owner:AddComponent("ttl_wanly_damage") end)
+                end
 
                 -- 暴击爆伤(HH框架属性)
                 local hh = owner.components.hh_player
@@ -120,9 +125,14 @@ AddPrefabPostInit("world", function(inst)
                             freezeTarget(target)
                             local max_hp = health.maxhealth or 100
                             local dmg = max_hp * FROST_PERCENT
-                            if owner._hanyue_has_totori and health.DoHHDelta then
-                                -- 托托莉噩梦伤害(真伤)
-                                health:DoHHDelta(-dmg, owner, nil)
+                            if owner._hanyue_has_totori then
+                                -- 托托莉噩梦伤害（ttl_wanly_damage 伤害模式）
+                                local ttl = owner.components.ttl_wanly_damage
+                                if ttl then
+                                    ttl:ApplyTTL_wanly_damage(target, dmg)
+                                else
+                                    health:DoDelta(-dmg, false, "hanyue_frost")
+                                end
                             else
                                 health:DoDelta(-dmg, false, "hanyue_frost")
                             end

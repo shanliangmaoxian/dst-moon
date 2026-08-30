@@ -83,6 +83,11 @@ AddPrefabPostInit("world", function(inst)
                     owner._yzdx_applyBuffs()
                 end
 
+                -- 确保 ttl_wanly_damage 组件存在（托托莉噩梦伤害组件，由托托莉mod提供）
+                if not owner.components.ttl_wanly_damage then
+                    _G.pcall(function() owner:AddComponent("ttl_wanly_damage") end)
+                end
+
                 -- 攻击时触发撕裂/噩梦伤害（使用缓存，不遍历 AllPlayers）
                 owner._yzdx_attack_handler = function(attacker, data)
                     if not _G.Moon_HasEffect(owner, "yzdx") then return end
@@ -97,9 +102,10 @@ AddPrefabPostInit("world", function(inst)
                     local dmg = max_hp * 0.01 * mult
 
                     if tutu then
-                        -- 有托托莉：1%最大生命噩梦伤害（真伤，无视防御）
-                        if health.DoHHDelta then
-                            health:DoHHDelta(-dmg, owner, nil)
+                        -- 有托托莉：1%最大生命噩梦伤害（托托莉 ttl_wanly_damage 伤害模式）
+                        local ttl = owner.components.ttl_wanly_damage
+                        if ttl then
+                            ttl:ApplyTTL_wanly_damage(target, dmg)
                         else
                             health:DoDelta(-dmg, false, nil)
                         end
