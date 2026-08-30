@@ -153,6 +153,7 @@ local function auto_transform_stone(essence_provider, stone, player)
                 ["data_effect"] = shown_effect_name,
                 ["data_essence"] = cosume_count + current_expend_essence
             }))
+            break;
         elseif random_num <= 5 then
             stone_effect_newly = rand_pick_on_pool(_G["HHGetGoodEquipEffect"]())
             -- 增加播报
@@ -170,6 +171,7 @@ local function auto_transform_stone(essence_provider, stone, player)
                 ["data_effect"] = shown_effect_name,
                 ["data_essence"] = cosume_count + current_expend_essence
             }))
+            break;
         else
             stone_effect_newly = rand_pick_on_pool(_G["HHGetComEquipEffect"]())
         end
