@@ -648,8 +648,8 @@ configuration_options = {
         label = "自动转换附魔重试次数上限",
         hover = "最多自动转换次数的上限",
         options = {
-            { description = "10", data = 200 },
-            { description = "100", data = 200 },
+            { description = "10", data = 10 },
+            { description = "100", data = 100 },
             { description = "200", data = 200 },
             { description = "500", data = 500 },
             { description = "1000", data = 1000 },
