@@ -49,22 +49,22 @@ AddPrefabPostInit("world", function(inst)
                 end
 
                 -- 雪花特效：目标头顶飘雪(优先 snow_fx，不存在则用冰刺特效兜底)
-                local function spawnSnowFx(target)
-                    if not target or not target.Transform then return end
-                    local fx = _G.SpawnPrefab("snow_fx")
-                    if not fx then
-                        fx = _G.SpawnPrefab("deerclops_icespike_fx")
-                    end
-                    if fx and fx.Transform then
-                        local x, y, z = target.Transform:GetWorldPosition()
-                        fx.Transform:SetPosition(x, y + 1.5, z)
-                        fx:DoTaskInTime(1.5, function()
-                            if fx:IsValid() then
-                                fx:Remove()
-                            end
-                        end)
-                    end
-                end
+                -- local function spawnSnowFx(target)
+                --     if not target or not target.Transform then return end
+                --     local fx = _G.SpawnPrefab("snow_fx")
+                --     if not fx then
+                --         fx = _G.SpawnPrefab("deerclops_icespike_fx")
+                --     end
+                --     if fx and fx.Transform then
+                --         local x, y, z = target.Transform:GetWorldPosition()
+                --         fx.Transform:SetPosition(x, y + 1.5, z)
+                --         fx:DoTaskInTime(1.5, function()
+                --             if fx:IsValid() then
+                --                 fx:Remove()
+                --             end
+                --         end)
+                --     end
+                -- end
 
                 -- 冻结目标
                 local function freezeTarget(target)

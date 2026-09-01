@@ -783,12 +783,18 @@ _G.MOON_MOB_ENCHANTS = {
             end
             if not st._moon_suppress_hooked then
                 st._moon_suppress_hooked = true
-                st._moon_suppress_origin = hhealth.DoDelta
+                -- 捕获当前 DoDelta 作为原函数（闭包持有，字段被清空/覆盖时兜底，防悬空调用崩溃）
+                local origin = hhealth.DoDelta
+                st._moon_suppress_origin = origin
                 local suppress_hook = function(hself, delta, overtime, cause, ignore_invincible, afflicter, ignore_absorb, ...)
-                    if delta and delta > 0 then
+                    if st._moon_suppress_active and delta and delta > 0 then
                         delta = delta * 0.1
                     end
-                    return st._moon_suppress_origin(hself, delta, overtime, cause, ignore_invincible, afflicter, ignore_absorb, ...)
+                    -- 兜底：原函数可能因还原失败/被其他 mod 覆盖链而丢失，字段丢失时退回闭包捕获的 origin
+                    local o = st._moon_suppress_origin or origin
+                    if o then
+                        return o(hself, delta, overtime, cause, ignore_invincible, afflicter, ignore_absorb, ...)
+                    end
                 end
                 st._moon_suppress_hook = suppress_hook
                 hhealth.DoDelta = suppress_hook
@@ -799,16 +805,20 @@ _G.MOON_MOB_ENCHANTS = {
                             and st.components.health.DoDelta == st._moon_suppress_hook
                             and st._moon_suppress_origin then
                         st.components.health.DoDelta = st._moon_suppress_origin
+                        -- 还原成功才清空字段（还原失败说明 hook 已被其他 mod 包住，需保留 origin 供链上兜底转发）
+                        st._moon_suppress_hooked = false
+                        st._moon_suppress_hook = nil
+                        st._moon_suppress_origin = nil
                     end
-                    st._moon_suppress_hooked = false
-                    st._moon_suppress_hook = nil
-                    st._moon_suppress_origin = nil
+                    -- 无论能否还原都停用禁疗效果，避免被困在链中的 hook 继续压血
+                    st._moon_suppress_active = false
                     if st._moon_suppress_task then
                         st._moon_suppress_task:Cancel()
                         st._moon_suppress_task = nil
                     end
                 end)
             end
+            st._moon_suppress_active = true
             st._moon_suppress_task = st:DoTaskInTime(10, function()
                 -- 校验当前 DoDelta 仍是自己装的 hook（防目标自身 damage hook 已先还原）
                 if st:IsValid() and st.components and st.components.health
@@ -816,10 +826,13 @@ _G.MOON_MOB_ENCHANTS = {
                         and st.components.health.DoDelta == st._moon_suppress_hook
                         and st._moon_suppress_origin then
                     st.components.health.DoDelta = st._moon_suppress_origin
+                    -- 还原成功才清空字段（还原失败说明 hook 已被其他 mod 包住，保留字段供链上兜底转发）
+                    st._moon_suppress_hooked = false
+                    st._moon_suppress_hook = nil
+                    st._moon_suppress_origin = nil
                 end
-                st._moon_suppress_hooked = false
-                st._moon_suppress_hook = nil
-                st._moon_suppress_origin = nil
+                -- 10 秒到期：即使 hook 因被其他 mod 包住而无法拆下，也只原样透传不再压血
+                st._moon_suppress_active = false
                 st._moon_suppress_task = nil
             end)
         end,
