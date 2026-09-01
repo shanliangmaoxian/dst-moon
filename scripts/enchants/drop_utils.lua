@@ -69,7 +69,7 @@ AddPrefabPostInit("spat", function(inst)
     if not GLOBAL.TheWorld.ismastersim then return end
     if not GLOBAL.Moon_IsModEnabled("workshop-2578692071") then return end
     inst:ListenForEvent("death", function(inst, data)
-        if math.random() > 0.10 then return end
+        if math.random() > 0.01 then return end
         local stone = GLOBAL.HHSpawnStoneById("Legend_LAOSHI")
         if stone then
             local pt = inst:GetPosition()
