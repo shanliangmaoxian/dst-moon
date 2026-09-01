@@ -107,7 +107,6 @@ AddPrefabPostInit("world", function(inst)
                     -- 永冻标记(攻击刷新持续时长)
                     owner._hanyue_marks[target] = _G.GetTime() + FROST_DURATION
                     freezeTarget(target)
-                    spawnSnowFx(target)
                 end
                 owner:ListenForEvent("onattackother", owner._hanyue_attack_handler)
 
@@ -136,7 +135,6 @@ AddPrefabPostInit("world", function(inst)
                             else
                                 health:DoDelta(-dmg, false, "hanyue_frost")
                             end
-                            spawnSnowFx(target)
                         end
                     end
                     for _, t in ipairs(remove_list) do

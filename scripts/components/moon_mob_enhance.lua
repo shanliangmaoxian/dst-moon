@@ -56,6 +56,24 @@ function MoonMobEnhance:OnStart(tier, diff_mult, enchant_ids, enchants_config, h
 end
 
 ---------------------------------------------------------------------
+-- 是否处于收纳状态（被打包 / 放入容器 / 捕捉进物品栏）
+-- 收纳期间怪物不参与战斗，其附魔效果（尤其光环类范围伤害）必须暂停，
+-- 否则蜘蛛等小怪被装进箱子后仍会通过 on_update 周期任务持续伤害附近玩家。
+-- 判断依据：实体被作为物品持有（inventoryitem.owner / IsHeld）。
+-- 实体被销毁的收纳方式（原实体 RemoveEntity 换 item）天然安全：
+-- 周期任务会因 inst:IsValid() 失败而退出，无需处理。
+---------------------------------------------------------------------
+function MoonMobEnhance:IsStored()
+    local inst = self.inst
+    if not inst:IsValid() then return true end
+    local inv = inst.components.inventoryitem
+    if inv and (inv.owner or (inv.IsHeld and inv:IsHeld())) then
+        return true
+    end
+    return false
+end
+
+---------------------------------------------------------------------
 -- 防御层 + 附魔伤害回调（统一走 DoDelta hook）
 -- 防御层从 self.defense_cfg 读取配置：mitigation/dynamic/cap/freq/scope
 -- 附魔的 cfg.on_damage 回调可在伤害落地前修改（如格挡归零）
@@ -211,6 +229,7 @@ function MoonMobEnhance:_ApplyEnchant(eid, cfg)
         local fn = function(attacker, data)
             if not self.inst:IsValid() then return end
             if not self.enchants[eid] then return end
+            if self:IsStored() then return end  -- 收纳中不生效
             cfg.on_attack(self.inst, data and data.target, self.tier, self.difficulty_mult, state, data)
         end
         state._attack_handler = fn
@@ -227,6 +246,7 @@ function MoonMobEnhance:_ApplyEnchant(eid, cfg)
         local fn = function(victim, data)
             if not self.inst:IsValid() then return end
             if not self.enchants[eid] then return end
+            if self:IsStored() then return end  -- 收纳中不生效
             local attacker = data and data.attacker
             local damage = data and data.damage or 0
             cfg.on_attacked(self.inst, attacker, damage, self.tier, self.difficulty_mult, state)
@@ -240,6 +260,7 @@ function MoonMobEnhance:_ApplyEnchant(eid, cfg)
         local fn = function(attacker, data)
             if not self.inst:IsValid() then return end
             if not self.enchants[eid] then return end
+            if self:IsStored() then return end  -- 收纳中不生效
             cfg.on_kill(self.inst, data and data.victim, self.tier, self.difficulty_mult, state)
         end
         state._kill_handler = fn
@@ -262,6 +283,7 @@ function MoonMobEnhance:_ApplyEnchant(eid, cfg)
                 end
                 return
             end
+            if self:IsStored() then return end  -- 收纳中暂停附魔效果（尤其光环类范围伤害）
             cfg.on_update(self.inst, self.tier, self.difficulty_mult, state)
         end)
     end
