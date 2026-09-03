@@ -40,7 +40,7 @@ modimport("scripts/strings")
 -- ------------------------------------------------------------------
 modimport("scripts/infrastructures/internal_tools_expand") -- 拓展内置函数
 modimport("scripts/infrastructures/dynamic_component_presist_support") -- 支持动态组件的自动持久化
-modimport("scripts/infrastructures/recipe_expand") -- 支持配方 Tile 中添加自定义控件图层
+modimport("scripts/infrastructures/recipe_expand") -- 配方相关新 API 拓展
 
 -- ------------------------------------------------------------------
 -- 1. 核心工具层 (无依赖)
