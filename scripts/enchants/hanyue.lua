@@ -8,11 +8,83 @@ local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
 
+local equip_util = require("moon_utils/equippable")
+
 local FROST_DURATION = 8    -- 永冻持续时间(秒)，攻击会刷新
 local FROST_PERCENT = 0.02  -- 每秒扣血百分比(2%最大生命)
 local TRUE_DMG = 666        -- 每次攻击附带的真伤
 local CRIT_RATE = 66        -- 暴击率(暴击率+66%)
 local CRIT_EFFECT = 666     -- 爆伤(额外+666%)
+
+local MEMORY_KEY = "LMOON_STONE_HANYUE_TEST_MEMORY"
+local PROGRESS_KEY = "LMOON_STONE_HANYUE_TEST_PROGRESS"
+
+local EFFECT_NAME = "Legend_HANYUE"
+local EFFECT_TEST_NAME = "Legend_HANYUE_TEST"
+
+local EFFECT_TEST_MEMORY_CAP = 5
+local EFFECT_TEST_SCORE = 40
+
+local function slice(arr, start, stop)
+    local result = {}
+    stop = stop or #arr
+
+    stop = stop <= 0 and math.max(1, #arr + stop + 1) or stop
+    start = start <= 0 and math.max(1, #arr + start + 1) or start
+
+    for i = start, stop do table.insert(result, arr[i]) end
+
+    return result
+end
+
+local function upgrade_effect(weapon)
+    if not weapon.components or not weapon.components.hh_equip then return end
+    local cp_hh_equip = weapon.components.hh_equip
+    cp_hh_equip:ReplaceEffectByName(EFFECT_TEST_NAME, EFFECT_NAME)
+end
+
+local function do_delta_score(weapon, killer, data)
+    if not weapon.components then return end
+    if not killer.components and not killer.components.health then return end
+    if not killer.components and not killer.components.hh_equip then return end
+
+    local cp_counter = weapon.components.counter;
+    local cp_custom_data = weapon.components.custom_data;
+    local cp_hh_equip = weapon.components.hh_equip
+
+    -- 记忆中杀过的 boss
+    local memory = cp_custom_data:Get(MEMORY_KEY) or {}
+    local progress = cp_counter:GetCount(PROGRESS_KEY)
+
+    local victim = data.victim
+    if victim:IsValid() and not victim:HasTag("player") and
+        victim:HasTag("epic") and not killer.components.health:IsDead() then
+
+        if table.contains(memory, victim.prefab) then -- 已在记忆中就忽略
+            return
+        end
+
+        -- 更新记忆
+        table.insert(memory, victim.prefab)
+        memory = slice(memory, -5, 0) -- 仅保留最新的 5 个，越靠后越新
+
+        cp_counter:DoDelta(PROGRESS_KEY, 1)
+        cp_custom_data:Set(MEMORY_KEY, memory)
+
+        -- 更新试炼进度，展示在武器详情页的信息
+        cp_hh_equip:UpdateEffectValueByName(EFFECT_TEST_NAME,
+                                            cp_counter:GetCount(PROGRESS_KEY))
+
+        -- 如果达到分数就升级效果
+        if cp_counter:GetCount(PROGRESS_KEY) >= EFFECT_TEST_SCORE then
+            upgrade_effect(weapon)
+        end
+    end
+end
+
+local function get_prefab_readable_name(prefab)
+    return STRINGS.NAMES[string.upper(prefab)] or "??"
+end
 
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
@@ -168,5 +240,64 @@ AddPrefabPostInit("world", function(inst)
         end,
     })
 
-    _G.Moon_RegisterEnchantDrop("Legend_HANYUE", 0) -- 掉落率0
+    GLOBAL.AddSpecialEquipEffect(EFFECT_TEST_NAME, {
+        name = "寒月试炼",
+        client_text = "寒月\n试炼",
+        desc = string.format("完成试炼此效果变为【寒月公主】\n试炼: 使用该武器交替击杀 5 种不同名 BOSS %s 次", EFFECT_TEST_SCORE),
+        recipes = {"moon_effect_stone_hanyue_test"},
+        desc_dync = function(equip, effect_value)
+            local cp_custom_data = equip.components.custom_data
+            local memory_list = table.map(cp_custom_data:Get(MEMORY_KEY) or {}, get_prefab_readable_name)
+            local memory_list_str = table.concat(memory_list, ", ")
+            return string.format(
+                       "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 使用该武器交替击杀 5 种不同名 BOSS：%s/%s\n最近击杀：%s\n================================",
+                       effect_value, EFFECT_TEST_SCORE, memory_list_str)
+        end,
+        check_desc = "武器栏",
+        can_add = false,
+        only_one = true,
+        is_special = false,
+        client_color = {0.8, 0, 0.8, 1},
+        check_equip_can_add = function(equip)
+            if not equip_util.is_equipslot(equip, "HANDS") then
+                return false, "仅能附魔在武器栏"
+            end
+            return true, "满足条件"
+        end,
+        start_fn = function(inst, value)
+            if inst.components and not inst.components.custom_data then
+                inst:AddComponentDynamic("custom_data")
+                inst.components.custom_data:Set(MEMORY_KEY, {})
+            end
+            if inst.components and not inst.components.counter then
+                inst:AddComponentDynamic("counter")
+            end
+            if inst.components and inst.components.hh_equip then
+                -- 更新初值
+                inst.components.hh_equip:UpdateEffectValueByName(
+                    EFFECT_TEST_NAME, value or 0)
+            end
+        end,
+        end_fn = function(inst, value)
+            inst.components.custom_data:Clear(MEMORY_KEY)
+            inst.components.counter:Clear(PROGRESS_KEY)
+        end,
+        on_equip_fn = function(inst, owner, value)
+            local weapon = inst
+            inst.__lmoon_stone_hanyue_on_killed =
+                function(inst, data)
+                    do_delta_score(weapon, inst, data)
+                end
+            owner:ListenForEvent("killed", inst.__lmoon_stone_hanyue_on_killed)
+        end,
+        un_equip_fn = function(inst, owner, value)
+            if inst.__lmoon_stone_hanyue_on_killed then
+                owner:RemoveEventCallback("killed",
+                                          inst.__lmoon_stone_hanyue_on_killed)
+            end
+        end
+    })
+
+    _G.Moon_RegisterEnchantDrop(EFFECT_NAME, 0) -- 掉落率0
+    _G.Moon_RegisterEnchantDrop(EFFECT_TEST_NAME, 0) -- 掉落率0
 end)

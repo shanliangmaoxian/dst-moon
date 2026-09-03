@@ -25,13 +25,25 @@ Assets = {
     Asset("ATLAS", "images/inventoryimages/star_brooch.xml"),
 }
 
+PrefabFiles = {
+    "moon_effect_stone_hanyue_test"
+}
 -- 骰子 RPC 在最顶部注册（确保客户端 MOD_RPC 表正确填充）
 AddModRPCHandler("LittleMoon", "RollDice", function(player)
     if _G.Moon_DoDiceRoll then _G.Moon_DoDiceRoll(player) end
 end)
 
+modimport("scripts/strings")
+
 -- ------------------------------------------------------------------
--- 1. 核心工具层 (无依赖，最先加载)
+-- 0. 基础设施 (无依赖，工程环境)
+-- ------------------------------------------------------------------
+modimport("scripts/infrastructures/internal_tools_expand") -- 拓展内置函数
+modimport("scripts/infrastructures/dynamic_component_presist_support") -- 支持动态组件的自动持久化
+modimport("scripts/infrastructures/recipe_expand") -- 支持配方 Tile 中添加自定义控件图层
+
+-- ------------------------------------------------------------------
+-- 1. 核心工具层 (无依赖)
 -- ------------------------------------------------------------------
 modimport("scripts/core/config")
 modimport("scripts/core/effect_manager")
@@ -41,6 +53,7 @@ modimport("scripts/core/treasure_utils")
 -- ------------------------------------------------------------------
 -- 2. 功能模块 (各文件内部根据配置决定是否启用)
 -- ------------------------------------------------------------------
+modimport("scripts/features/hh_enchant_expand") -- 通用附魔机制拓展
 modimport("scripts/features/anti_packing")
 modimport("scripts/features/loot_limiter")
 modimport("scripts/features/treasure")
@@ -119,6 +132,12 @@ modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
 -- modimport("scripts/enchants/xinshidi")
 
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
+
+-- ------------------------------------------------------------------
+-- 配方
+-- ------------------------------------------------------------------
+modimport("scripts/recipes/recipe_stone") -- 附魔石配方
+
 
 
 -- ------------------------------------------------------------------

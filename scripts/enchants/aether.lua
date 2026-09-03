@@ -324,13 +324,6 @@ local noop = function() end
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
-    local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
-    GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
-        old_add_special_equip_effect(effect_id, data)
-        HH_EQUIP_BUFF_LIST[effect_id]["slots"] = data.slots or 1
-        HH_EQUIP_BUFF_LIST[effect_id]["obtain_desc"] = data.obtain_desc
-    end
-
     GLOBAL.AddSpecialEquipEffect(EFFECT_NAME, {
         name = "以太",
         client_text = "以\n太",
