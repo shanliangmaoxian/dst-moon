@@ -36,6 +36,24 @@ AddPrefabPostInit("world", function(inst)
 
                 -- 仅伊蕾娜(elaina)角色装备生效
                 if owner.prefab == "elaina" or owner:HasTag("elaina") then
+                    -- 持久化当天发放记录：跳世界/存档重载后玩家实体重建，
+                    -- _laoshi_last_day 若丢失会在同一天重复发放，随玩家存档数据持久化
+                    if not owner._laoshi_save_hooked then
+                        owner._laoshi_save_hooked = true
+                        local _old_OnSave = owner.OnSave
+                        owner.OnSave = function(inst, data)
+                            if _old_OnSave then _old_OnSave(inst, data) end
+                            data._laoshi_last_day = inst._laoshi_last_day
+                        end
+                        local _old_OnLoad = owner.OnLoad
+                        owner.OnLoad = function(inst, data)
+                            if _old_OnLoad then _old_OnLoad(inst, data) end
+                            if data and data._laoshi_last_day ~= nil then
+                                inst._laoshi_last_day = data._laoshi_last_day
+                            end
+                        end
+                    end
+
                     local function give_dtsp()
                         if not _G.Moon_HasEffect(owner, "laoshi") then return end
                         if not owner:IsValid() or not owner.components.inventory then return end
