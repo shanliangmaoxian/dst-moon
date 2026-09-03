@@ -1,27 +1,15 @@
 local containers = require("containers")
 local Widget = require("widgets/widget")
 
-local HH_EQUIP_BUFF_LIST
-
-local ok, hh_enchant = pcall(function() return require("enums/hh_enchant") end)
-if not ok or not hh_enchant then return end
-HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
-
-local ok, HH_LANGUAGE =
-    pcall(function() return require("enums/hh_language") end)
-if not ok or not HH_LANGUAGE then return end
-
-local ok, HH_UTILS = pcall(function() return require("utils/hh_utils") end)
-if not ok or not HH_UTILS then return end
-
 -- 小月亮 附魔：以太
 -- 增强拆除法杖的功能
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
-local Max_Transform_Times = CFG.TRANSFORM_LIMIT
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
+if not _G.Moon_IsHHEnabled() then return end
 
+local Max_Transform_Times = CFG.TRANSFORM_LIMIT
 local EFFECT_NAME = "Legend_AETHER"
 
 local function is_common_effect(effect)
@@ -322,8 +310,6 @@ local handle_map = {
 local noop = function() end
 
 AddPrefabPostInit("world", function(inst)
-    if not _G.Moon_IsHHEnabled() then return end
-
     GLOBAL.AddSpecialEquipEffect(EFFECT_NAME, {
         name = "以太",
         client_text = "以\n太",

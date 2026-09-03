@@ -2,14 +2,10 @@ local Text = require("widgets/text")
 
 local _G = GLOBAL
 
+if not GLOBAL.Moon_IsHHEnabled() then return end
+
 local hh_utils = require("moon_utils/hh_enhants")
 local table_utils = require("moon_utils/table")
-
-local ok, hh_enchant = _G.pcall(
-                           function() return require("enums/hh_enchant") end)
-if not ok or not hh_enchant then return end
-local HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
-local HH_SUIT_LIST = hh_enchant["HH_SUIT_LIST"]
 
 local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
 GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)

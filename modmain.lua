@@ -51,6 +51,12 @@ modimport("scripts/core/mod_utils")
 modimport("scripts/core/treasure_utils")
 
 -- ------------------------------------------------------------------
+-- 其它 Mod 中的导入
+-- ------------------------------------------------------------------
+modimport("scripts/external_imports")
+
+modimport("scripts/moon_global_utils/recipe")
+-- ------------------------------------------------------------------
 -- 2. 功能模块 (各文件内部根据配置决定是否启用)
 -- ------------------------------------------------------------------
 modimport("scripts/features/hh_enchant_expand") -- 通用附魔机制拓展

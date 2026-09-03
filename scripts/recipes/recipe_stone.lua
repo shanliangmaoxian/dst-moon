@@ -1,9 +1,7 @@
-require "moon_utils/recipe"
-
 local CFG = GLOBAL.MOON_CFG
 
 -- 寒月试炼附魔石配方
-if CFG.ENABLE_MORE_ENCHANTS then
+if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
 
     -- local enable_aria = Moon_IsModEnabled("workshop-2418617371")            -- 艾丽娅，宝石领主
     -- local enable_underline = Moon_IsModEnabled("workshop-3672431769")       -- 更多附魔石
