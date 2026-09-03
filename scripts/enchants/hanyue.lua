@@ -138,8 +138,14 @@ AddPrefabPostInit("world", function(inst)
                 --     end
                 -- end
 
+                -- 永冻排除名单：这些生物不吃冰冻(仍会吃到真伤和每秒扣血)
+                local FROST_EXCLUDE_PREFABS = {
+                    lunarthrall_plant = true, -- 亮茄
+                }
+
                 -- 冻结目标
                 local function freezeTarget(target)
+                    if FROST_EXCLUDE_PREFABS[target.prefab] then return end
                     local fz = target.components.freezable
                     if fz then
                         fz:AddColdness(1)
