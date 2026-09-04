@@ -82,6 +82,7 @@ modimport("scripts/features/start_gift_client") -- 开局礼包（客户端弹�
 -- ------------------------------------------------------------------
 -- 3. 附魔模块
 -- ------------------------------------------------------------------
+modimport("scripts/enchants/tier_config")  -- 附魔档位中央表（需在所有附魔注册之前加载）
 modimport("scripts/enchants/drop_utils")
 modimport("scripts/enchants/mx_health")
 -- modimport("scripts/enchants/zd_butterfly") 紫蝶去掉

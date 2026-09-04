@@ -13,9 +13,16 @@ local POOL = {}
 -- 注册附魔石到掉落池
 -- @param enchant_id: 附魔石 ID
 -- @param drop_weight: 权重 (0 表示不掉落，默认 1)
+-- 档位覆盖：tier_config.lua 配了档位的附魔，权重以中央表
+-- TUNING.MOON_ENCHANT_TIER_WEIGHTS[tier] 为准；未列入的沿用注册值
 function _G.Moon_RegisterEnchantDrop(enchant_id, drop_weight)
     local weight = drop_weight
     if weight == nil then weight = 1 end
+    local tier = TUNING.MOON_ENCHANT_TIERS and TUNING.MOON_ENCHANT_TIERS[enchant_id]
+    if tier and TUNING.MOON_ENCHANT_TIER_WEIGHTS then
+        local tier_weight = TUNING.MOON_ENCHANT_TIER_WEIGHTS[tier]
+        if tier_weight then weight = tier_weight end
+    end
     if weight <= 0 then
         POOL[enchant_id] = nil
     else
