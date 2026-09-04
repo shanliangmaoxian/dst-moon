@@ -26,7 +26,7 @@ Assets = {
 }
 
 PrefabFiles = {
-    "moon_effect_stone_hanyue_test"
+    "lmoon_effect_stones",
 }
 -- 骰子 RPC 在最顶部注册（确保客户端 MOD_RPC 表正确填充）
 AddModRPCHandler("LittleMoon", "RollDice", function(player)
@@ -83,6 +83,7 @@ modimport("scripts/features/start_gift_client") -- 开局礼包（客户端弹�
 -- 3. 附魔模块
 -- ------------------------------------------------------------------
 modimport("scripts/enchants/tier_config")  -- 附魔档位中央表（需在所有附魔注册之前加载）
+modimport("scripts/enchants/quickcast")
 modimport("scripts/enchants/drop_utils")
 modimport("scripts/enchants/mx_health")
 -- modimport("scripts/enchants/zd_butterfly") 紫蝶去掉
