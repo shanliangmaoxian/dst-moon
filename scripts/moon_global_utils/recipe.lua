@@ -1,8 +1,7 @@
-local Text = require("widgets/text")
 
-local ok, hh_enchant = _G.pcall(function() return require("enums/hh_enchant") end)
-if not ok or not hh_enchant then return end
-local HH_EQUIP_BUFF_LIST = hh_enchant["HH_EQUIP_BUFF_LIST"]
+if not GLOBAL.Moon_IsHHEnabled() then return end
+
+local Text = require("widgets/text")
 
 function HHEffectStoneIngredient(p_effect_id, amount)
     return Ingredient2('hh_effect_stone', amount or 1, {
