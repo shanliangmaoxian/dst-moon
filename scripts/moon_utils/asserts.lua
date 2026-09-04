@@ -2,10 +2,10 @@ local utils = {}
 
 function utils.is_equipslot(target, equip_slot)
     if target.components and target.components.equippable then
-        return target.components.equippable.equipslot == equip_slot
+        return string.upper(target.components.equippable.equipslot) == string.upper(equip_slot)
     end
     if target.replica and target.replica.equippable then
-        return target.replica.equippable:EquipSlot() == equip_slot
+        return string.upper(target.replica.equippable:EquipSlot()) == string.upper(equip_slot)
     end
     return false
 end
