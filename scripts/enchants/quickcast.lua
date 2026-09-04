@@ -26,14 +26,22 @@ end
 
 -- 根据物品 Tag 决定是否导向快速施法状态
 AddStategraphPostInit("wilson", function(sg)
-	local old_deststate = sg.actionhandlers[GLOBAL.ACTIONS.CASTSPELL].deststate
-	sg.actionhandlers[GLOBAL.ACTIONS.CASTSPELL] = GLOBAL.ActionHandler(GLOBAL.ACTIONS.CASTSPELL,
-        function(inst, action)
-			if action.invobject and action.invobject:HasTag(TAG_NAME) then
-				return STATE_NAME
-			end
+    local function forward_to_quickcast_from(forward_action)
+        local old_deststate = sg.actionhandlers[forward_action].deststate
+        local function redirected_deststate(inst, action)
+            if action.invobject and action.invobject:HasTag(TAG_NAME) then
+                return STATE_NAME
+            end
             return old_deststate(inst, action)
-        end)
+        end
+        sg.actionhandlers[forward_action] = GLOBAL.ActionHandler(forward_action, redirected_deststate)
+    end
+
+    -- 这些都是回退到 castspell 的 action，默认都是使用相同的施法动作
+    forward_to_quickcast_from(GLOBAL.ACTIONS.CASTSPELL)
+    forward_to_quickcast_from(GLOBAL.ACTIONS.CASTAOE)           -- 范围施法
+    forward_to_quickcast_from(GLOBAL.ACTIONS.CASTSUMMON)        -- 召唤
+    forward_to_quickcast_from(GLOBAL.ACTIONS.CASTUNSUMMON)      -- 取消召唤
 end)
 
 AddStategraphPostInit("wilson", function(sg)
