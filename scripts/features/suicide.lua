@@ -25,19 +25,19 @@ AddModRPCHandler("LittleMoon", "Suicide", function(player)
 end)
 
 -- 聊天指令监听 (已关闭：消息会泄露到公屏)
--- local Old_Networking_Say = _G.Networking_Say
--- _G.Networking_Say = function(guid, userid, name, prefab, message, colour, whisper, is_repeat, ...)
---     if Old_Networking_Say then
---         Old_Networking_Say(guid, userid, name, prefab, message, colour, whisper, is_repeat, ...)
---     end
---
---     if _G.TheWorld and _G.TheWorld.ismastersim and message and message:sub(1, 1) == "#" then
---         local cmd = message:sub(2):lower()
---         if cmd == "zs" or cmd == "kill" or cmd == "自杀" then
---             local player = _G.UserToPlayer(userid)
---             if player then
---                 DoSuicide(player)
---             end
---         end
---     end
--- end
+local Old_Networking_Say = _G.Networking_Say
+_G.Networking_Say = function(guid, userid, name, prefab, message, colour, whisper, is_repeat, ...)
+    if Old_Networking_Say then
+        Old_Networking_Say(guid, userid, name, prefab, message, colour, whisper, is_repeat, ...)
+    end
+
+    if _G.TheWorld and _G.TheWorld.ismastersim and message and message:sub(1, 1) == "#" then
+        local cmd = message:sub(2):lower()
+        if cmd == "zs" or cmd == "kill" or cmd == "自杀" then
+            local player = _G.UserToPlayer(userid)
+            if player then
+                DoSuicide(player)
+            end
+        end
+    end
+end
