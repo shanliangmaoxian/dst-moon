@@ -8,7 +8,7 @@ local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
 
-local equip_util = require("moon_utils/equippable")
+local equip_util = require("moon_utils/asserts")
 
 local FROST_DURATION = 8    -- 永冻持续时间(秒)，攻击会刷新
 local FROST_PERCENT = 0.02  -- 每秒扣血百分比(2%最大生命)
@@ -98,7 +98,10 @@ AddPrefabPostInit("world", function(inst)
         only_one = true,
         is_special = false,
         client_color = { 0.8, 0, 0.8, 1 },
-        check_equip_can_add = function(inst)
+        check_equip_can_add = function(equip)
+            if not equip_util.is_equipslot(equip, "HANDS") then
+                return false, "仅能附魔在武器栏"
+            end
             return true, "满足条件"
         end,
         on_equip_fn = function(inst, owner, value)

@@ -1,5 +1,6 @@
 local containers = require("containers")
 local Widget = require("widgets/widget")
+local assert_utils = require("moon_utils/asserts")
 
 if not _G.Moon_IsHHEnabled() then return end
 
@@ -219,7 +220,7 @@ AddPrefabPostInit("world", function(inst)
         is_special = false,
         client_color = {0.8, 0, 0.8, 1},
         check_equip_can_add = function(inst)
-            if inst and (inst.components and inst.components.spellcaster) or (inst.replica and inst.replica.spellcaster) then
+            if assert_utils.is_spellcaster(inst) then
                 return true, "满足条件"
             end
             return false, "仅能附魔在能施法的装备中"
