@@ -1,4 +1,5 @@
 local Text = require("widgets/text")
+local assert_utils = require("moon_utils/asserts")
 
 local _G = GLOBAL
 
@@ -11,6 +12,11 @@ local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
 GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
     old_add_special_equip_effect(effect_id, data)
     HH_EQUIP_BUFF_LIST[effect_id]["slots"] = data.slots or 1
+    -- obtains 是一个列表，其中元素取值为 "good_pool", "rare_pool", "common_pool", "hh_effect_tally"，
+    -- 分别表示是否能从这些池子或者某个道具中获取到该附魔效果
+    -- 如果 obtains 存在则在原版附魔基础上需要额外满足 obtains 的条件，否则保持原版附魔的逻辑
+    -- 空列表视为任何获取途径都不允许
+    HH_EQUIP_BUFF_LIST[effect_id]["obtains"] = data.obtains
     HH_EQUIP_BUFF_LIST[effect_id]["obtain_desc"] = data.obtain_desc
     HH_EQUIP_BUFF_LIST[effect_id]["desc_dync"] = data.desc_dync
     HH_EQUIP_BUFF_LIST[effect_id]["recipes"] = data.recipes
@@ -21,6 +27,51 @@ GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
             HH_EQUIP_BUFF_LIST[effect_id]
     end
 
+end
+
+-- 应用新筛选器 obtains_filter
+local function apply_effect_obtains_filter(current_obtain, effect_config)
+    if effect_config.obtains and type(effect_config.obtains) == "table" then
+        return table.contains(effect_config.obtains, current_obtain)
+    end
+    return true
+end
+
+GLOBAL["HHGetGoodEquipEffect"] = function()
+    local hh_table = {}
+    for i, v in pairs(HH_EQUIP_BUFF_LIST) do
+        if v and not v["can_add"] and not v["is_suit"]
+                and not v["only_compound"]
+                and not v["is_special"]
+                and apply_effect_obtains_filter("good_pool", v)
+        then
+            table["insert"](hh_table, i)
+        end
+    end
+    return hh_table
+end
+GLOBAL["HHGetRareEquipEffect"] = function()
+    local hh_table = {}
+    for i, v in pairs(HH_EQUIP_BUFF_LIST) do
+        if v and not v["can_add"] and not v["is_suit"]
+                and v["only_compound"]
+                and apply_effect_obtains_filter("rare_pool", v)
+        then
+            table["insert"](hh_table, i)
+        end
+    end
+    return hh_table
+end
+GLOBAL["HHGetComEquipEffect"] = function()
+    local hh_table = {}
+    for i, v in pairs(HH_EQUIP_BUFF_LIST) do
+        if v and v["can_add"] and not v["is_suit"]
+            and apply_effect_obtains_filter("common_pool", v)
+        then
+            table["insert"](hh_table, i)
+        end
+    end
+    return hh_table
 end
 
 AddComponentPostInit("hh_equip", function(self, inst)
@@ -172,6 +223,37 @@ AddComponentPostInit("hh_equip", function(self, inst)
         return {}
     end
 
+    -- 应用新筛选器 obtains_filter
+    function self:GetAllBuffByEquip()
+        local hh_buff = {}
+        
+        if not self["inst"] or not assert_utils.get_component(self.inst, "equippable") then
+            return hh_buff
+        end
+        for i, v in pairs(HH_EQUIP_BUFF_LIST) do
+            if i and v and v["can_add"] and not v["is_suit"] and apply_effect_obtains_filter("hh_effect_tally", v) then
+                local can_add_bool = true
+                local buff_id = i
+                if v["check_equip_can_add"] then
+                    can_add_bool = v["check_equip_can_add"](self["inst"])
+                end
+                --处理词条唯一性 已拥有具备唯一性的词条无法镶嵌多条重复的
+                local only_one_bool = true
+                if v["only_one"] then
+                    for key, value in ipairs(self["equip_buff_list"]) do
+                        if value and value["name"] == buff_id then
+                            only_one_bool = false
+                            break
+                        end
+                    end
+                end
+                if can_add_bool and only_one_bool then
+                    table["insert"](hh_buff, buff_id)
+                end
+            end
+        end
+        return hh_buff
+    end
 end)
 
 -- TODO: 是否能像 IngredientUI 一样在指定配方时传入 overlay 指定自定义控件？如果能做到那么反向映射附魔 recipes 字段则是不必要的。

@@ -317,6 +317,7 @@ AddPrefabPostInit("world", function(inst)
         check_desc = "仅能附魔在拆解法杖上",
         can_add = false,
         obtain_desc = "若拆解法杖周围地上存在 7 色宝石各一个，检查它即可附魔上去",
+        obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         only_one = true,
         is_special = false,
         slots = 0,
