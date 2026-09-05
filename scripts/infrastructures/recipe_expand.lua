@@ -166,7 +166,7 @@ AddClassPostConstruct("components/builder_replica", function(Builder)
     function Builder:HasIngredients(recipe)
         if self.inst.components.builder ~= nil then
             return self.inst.components.builder:HasIngredients(recipe)
-        elseif self.classified ~= nil then
+        elseif self.classified ~= nil and self.inst.replica and self.inst.replica.inventory then
             if type(recipe) == "string" then
                 recipe = GetValidRecipe(recipe)
             end
