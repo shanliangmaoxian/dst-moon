@@ -50,8 +50,33 @@ AddPrefabPostInit("world", function(inst)
                     hh:AddEffectValueByKey("immuneBramble", 1)
                 end
 
-                -- 脱手（免疫缴械）
-                owner:AddTag("stronggrip")
+                -- ==============================================
+                -- 脱手（免疫缴械/卸甲）：分两层
+                -- 1) stronggrip tag：挡原版湿滑(slipperyfeet)滑落
+                --    （记录 own 标志，避免穿脱时误删 yufenfen 等同款来源的 tag）
+                -- 2) 拦截 inventory:DropItem：把"已装备物品丢到地上"的路径
+                --    全部吞掉（mod 怪击落卸甲/缴械等）
+                -- ==============================================
+                if not owner:HasTag("stronggrip") then
+                    owner:AddTag("stronggrip")
+                    owner._xiaohudie_own_stronggrip = true
+                end
+
+                local inventory = owner.components.inventory
+                if inventory and inventory.DropItem and not owner._xiaohudie_hooked_dropitem then
+                    owner._xiaohudie_old_dropitem = inventory.DropItem
+                    inventory.DropItem = function(self, item, ...)
+                        if _G.Moon_HasEffect(owner, "xiaohudie")
+                            and item ~= nil
+                            and item.components.equippable
+                            and item.components.equippable:IsEquipped()
+                        then
+                            return true -- 已装备物品被击落/丢弃时直接吞掉（免疫卸甲）
+                        end
+                        return owner._xiaohudie_old_dropitem(self, item, ...)
+                    end
+                    owner._xiaohudie_hooked_dropitem = true
+                end
 
                 -- ==============================================
                 -- 免疫中毒 + 免疫制裁（本 mod 自实现）
@@ -125,8 +150,19 @@ AddPrefabPostInit("world", function(inst)
                     hh:ReduceEffectValueByKey("immuneBramble", 1)
                 end
 
-                owner:RemoveTag("stronggrip")
+                if owner._xiaohudie_own_stronggrip then
+                    owner:RemoveTag("stronggrip")
+                    owner._xiaohudie_own_stronggrip = nil
+                end
                 owner:RemoveTag("moon_poison_immune")
+
+                -- 恢复 inventory:DropItem
+                local inventory = owner.components.inventory
+                if inventory and owner._xiaohudie_old_dropitem then
+                    inventory.DropItem = owner._xiaohudie_old_dropitem
+                    owner._xiaohudie_old_dropitem = nil
+                    owner._xiaohudie_hooked_dropitem = nil
+                end
 
                 -- 恢复 hh_buff:AddBuff
                 local hh_buff = owner.components.hh_buff
