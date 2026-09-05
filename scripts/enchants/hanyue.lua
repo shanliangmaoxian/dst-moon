@@ -94,6 +94,8 @@ AddPrefabPostInit("world", function(inst)
         client_text = "寒月\n公主",
         desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦伤害 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤",
         check_desc = "寒月照，万物霜！",
+        obtain_desc = "由【寒月试炼】获得",
+        obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         can_add = false,
         only_one = true,
         is_special = false,
@@ -263,6 +265,8 @@ AddPrefabPostInit("world", function(inst)
                        effect_value, EFFECT_TEST_SCORE, memory_list_str)
         end,
         check_desc = "武器栏",
+        obtain_desc = "合成",
+        obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         can_add = false,
         only_one = true,
         is_special = false,

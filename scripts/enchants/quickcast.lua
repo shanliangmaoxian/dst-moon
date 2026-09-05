@@ -216,6 +216,7 @@ AddPrefabPostInit("world", function(inst)
         recipes = {"lmoon_effect_stone_quickcast"},
         can_add = false,
         obtain_desc = "合成",
+        obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         only_one = true,
         is_special = false,
         client_color = {0.8, 0, 0.8, 1},
