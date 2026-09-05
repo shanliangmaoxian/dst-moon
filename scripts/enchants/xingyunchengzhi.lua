@@ -120,6 +120,8 @@ AddPrefabPostInit("world", function(inst)
                 -- 采集15%概率双倍产出（采摘/收获）
                 owner._xycz_pick_handler = function(inst, data)
                     if not _G.Moon_HasEffect(owner, "xingyunchengzhi") then return end
+                    -- 防止"取回宝石"被双倍
+                    if data and data.object and data.object.components.trader then return end
                     if data and data.loot and math.random() <= 0.30 then
                         if data.loot.prefab and owner.components.inventory then
                             local extra = _G.SpawnPrefab(data.loot.prefab)
