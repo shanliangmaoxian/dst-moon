@@ -1,7 +1,7 @@
 name = "小月亮 (Little Moon)"
 description = "提取自特定Mod的召唤功能：小月亮按钮及召唤面板"
 author = "九月"
-version = "1.19.6"
+version = "1.19.7"
 api_version = 10
 priority = -1
 dst_compatible = true
