@@ -37,10 +37,49 @@ local function slice(arr, start, stop)
     return result
 end
 
+-- 查找试炼词条(兼容旧存档): 精确匹配失败时, 按"配置同一性"(别名键 __recipe__*
+-- 与真名共享同一份配置表)或名字前缀(改版前旧 id 已无配置)兜底识别
+local function find_test_effect(hh_equip)
+    local info = hh_equip:FindEffect(EFFECT_TEST_NAME)
+    if info then return info end
+
+    for slot_index, effect in ipairs(hh_equip.equip_buff_list) do
+        local name = effect and effect.name
+        if name and name ~= EFFECT_NAME then
+            local cfg = HH_EQUIP_BUFF_LIST and HH_EQUIP_BUFF_LIST[name]
+            if (cfg and cfg == HH_EQUIP_BUFF_LIST[EFFECT_TEST_NAME])
+                or (not cfg and name:find("HANYUE", 1, true)) then
+                return {slot_index = slot_index, effect = effect}
+            end
+        end
+    end
+end
+
 local function upgrade_effect(weapon)
     if not weapon.components or not weapon.components.hh_equip then return end
-    weapon.components.hh_equip:ReplaceEffectByName(EFFECT_TEST_NAME,
-                                                   EFFECT_NAME)
+    local hh_equip = weapon.components.hh_equip
+    local info = find_test_effect(hh_equip)
+    if not info then
+        print("[寒月试炼] upgrade_effect: 未找到试炼词条, 跳过升级")
+        return
+    end
+
+    local old_name = info.effect.name
+    if old_name ~= EFFECT_TEST_NAME then
+        print("[寒月试炼] 旧存档词条名: " .. tostring(old_name) .. " -> 兼容升级")
+    end
+
+    if HH_EQUIP_BUFF_LIST and HH_EQUIP_BUFF_LIST[old_name] then
+        -- 别名键与真名共享同一份配置, 按实际存的名字替换即可正确执行 end_fn
+        hh_equip:ReplaceEffectByName(old_name, EFFECT_NAME)
+    else
+        -- 改版前旧 id 已无配置: 手动替换词条并手动执行试炼的 end_fn
+        hh_equip:ReplaceEffect(info.slot_index, EFFECT_NAME)
+        local test_cfg = HH_EQUIP_BUFF_LIST and HH_EQUIP_BUFF_LIST[EFFECT_TEST_NAME]
+        if test_cfg and test_cfg.end_fn then
+            test_cfg.end_fn(hh_equip.inst, info.effect.value)
+        end
+    end
 end
 
 local function do_delta_score(weapon, killer, data)
@@ -306,6 +345,21 @@ AddPrefabPostInit("world", function(inst)
             inst.components.counter:Clear(PROGRESS_KEY)
         end,
         on_equip_fn = function(inst, owner, value)
+            -- 诊断: 打印该武器实际存的词条名(排查旧存档别名/旧 id 脏数据)
+            if inst.components and inst.components.hh_equip then
+                for i, v in ipairs(inst.components.hh_equip.equip_buff_list) do
+                    print("[寒月试炼] 词条", i, tostring(v.name),
+                          tostring(v.value))
+                end
+            end
+            -- 补判: 阈值调小或判定漏跑后, 装备时计数已达标则立即升级
+            -- (升级成功就不再登记击杀监听, 避免升级后继续累计)
+            if inst.components and inst.components.counter
+                and inst.components.counter:GetCount(PROGRESS_KEY)
+                    >= EFFECT_TEST_SCORE then
+                upgrade_effect(inst)
+                return
+            end
             local weapon = inst
             inst.__lmoon_stone_hanyue_on_killed =
                 function(inst, data)
