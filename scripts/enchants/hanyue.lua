@@ -39,8 +39,8 @@ end
 
 local function upgrade_effect(weapon)
     if not weapon.components or not weapon.components.hh_equip then return end
-    local cp_hh_equip = weapon.components.hh_equip
-    cp_hh_equip:ReplaceEffectByName(EFFECT_TEST_NAME, EFFECT_NAME)
+    weapon.components.hh_equip:ReplaceEffectByName(EFFECT_TEST_NAME,
+                                                   EFFECT_NAME)
 end
 
 local function do_delta_score(weapon, killer, data)
@@ -257,12 +257,22 @@ AddPrefabPostInit("world", function(inst)
         desc = string.format("完成试炼此效果变为【寒月公主】\n试炼: 使用该武器交替击杀 5 种不同名 BOSS %s 次", EFFECT_TEST_SCORE),
         recipes = {"moon_effect_stone_hanyue_test"},
         desc_dync = function(equip, effect_value)
-            local cp_custom_data = equip.components.custom_data
-            local memory_list = table.map(cp_custom_data:Get(MEMORY_KEY) or {}, get_prefab_readable_name)
+            -- 计数直接读 counter 组件，不依赖 UpdateEffectValueByName 回写的 value
+            -- (词条实例名与效果 id 不一致时回写会失效，导致计数永远停在 0)
+            local count = effect_value or 0
+            if equip.components and equip.components.counter then
+                local live_count = equip.components.counter:GetCount(PROGRESS_KEY)
+                if live_count and live_count > (tonumber(count) or 0) then
+                    count = live_count
+                end
+            end
+            local cp_custom_data = equip.components and equip.components.custom_data
+            local memory_list = cp_custom_data and
+                table.map(cp_custom_data:Get(MEMORY_KEY) or {}, get_prefab_readable_name) or {}
             local memory_list_str = table.concat(memory_list, ", ")
             return string.format(
                        "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 使用该武器交替击杀 5 种不同名 BOSS：%s/%s\n最近击杀：%s\n================================",
-                       effect_value, EFFECT_TEST_SCORE, memory_list_str)
+                       count, EFFECT_TEST_SCORE, memory_list_str)
         end,
         check_desc = "武器栏",
         obtain_desc = "合成",
