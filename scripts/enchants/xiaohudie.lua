@@ -1,5 +1,6 @@
 -- 小月亮 附魔：小蝴蝶
 -- 限伤10%、免疫反伤、脱手、免疫击飞、免疫中毒、免疫制裁
+-- 套装「双飞伴生蝶」：与小阿飞齐穿，濒死时立即回满生命（共2次）
 -- 小蝴蝶，飞啊飞啊飞～
 
 local _G = GLOBAL
@@ -30,7 +31,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_XIAOHUDIE", {
         name = "小蝴蝶",
         client_text = "小蝴\n蝶",
-        desc = "限伤10%+免疫反伤+脱手\n免疫击飞+免疫中毒+免疫制裁",
+        desc = "限伤10%+免疫反伤+脱手\n免疫击飞+免疫中毒+免疫制裁\n套装「双飞伴生蝶」:与小阿飞齐穿\n濒死时立即回满生命(共2次)",
         check_desc = "小蝴蝶，飞啊飞啊飞～",
         can_add = false,
         only_one = true,

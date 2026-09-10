@@ -2,11 +2,21 @@
 -- 5只光翼蝴蝶护体：受击消耗1只减免60%伤害
 -- 每6秒恢复1只；击杀回复25生命+15精神并恢复2只
 -- 每只蝴蝶+4%伤害(满5只+20%)，移速+20%
+-- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死时立即回满生命（共2次）
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
+
+-- 套装「双飞伴生蝶」：濒死满血次数
+local SUIT_CHARGES = 2
+
+-- 套装判定：小蝴蝶 + 小阿飞 同时装备
+local function isSuitActive(owner)
+    return _G.Moon_HasEffect(owner, "hufei")
+        and _G.Moon_HasEffect(owner, "xiaohudie")
+end
 
 -- 同步护体蝴蝶的可见实体（数量与 _hufei_butterflies 一致，紫色光翼环绕）
 local function sync_butterfly_visuals(owner)
@@ -57,7 +67,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HUFEI", {
         name = "蝴蝶的小阿飞",
         client_text = "蝶\n飞",
-        desc = "5只光翼蝴蝶护体,受击耗1只减免60%\n每6秒回1只;击杀回25血+15精神+2只\n每只蝴蝶+4%伤害,移速+20%",
+        desc = "5只光翼蝴蝶护体,受击耗1只减免60%\n每6秒回1只;击杀回25血+15精神+2只\n每只蝴蝶+4%伤害,移速+20%\n套装「双飞伴生蝶」:与小蝴蝶齐穿\n濒死时立即回满生命(共2次)",
         check_desc = "蝶翼护体，攻守兼备！",
         can_add = false,
         only_one = true,
@@ -71,6 +81,33 @@ AddPrefabPostInit("world", function(inst)
             if not owner._hufei_hooked then
                 owner._hufei_hooked = true
                 owner._hufei_butterflies = 5      -- 初始5只
+
+                -- ==============================================
+                -- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死满血（共2次）
+                -- 原理：health 组件在生命触底(≤0)瞬间先推 "minhealth" 事件、
+                -- 之后才在同一函数内推 "death"；在 minhealth 回调里把血拉满，
+                -- SetVal 后续的死亡判定读到的 currenthealth 已 > 0，死亡被跳过。
+                -- ==============================================
+                owner._shuangfei_charges = SUIT_CHARGES
+                owner._shuangfei_death_handler = function()
+                    owner._shuangfei_dead = true  -- 真死过就不再触发（防尸体重复触发）
+                end
+                owner:ListenForEvent("death", owner._shuangfei_death_handler)
+                owner._shuangfei_minhealth_handler = function(inst, data)
+                    if owner._shuangfei_dead then return end
+                    if (owner._shuangfei_charges or 0) <= 0 then return end
+                    if not isSuitActive(owner) then return end
+                    owner._shuangfei_charges = owner._shuangfei_charges - 1
+                    local health = owner.components.health
+                    if health then
+                        health:DoDelta(health.maxhealth, true, "shuangfei_save")
+                    end
+                    if owner.components.talker then
+                        owner.components.talker:Say(string.format(
+                            "双飞伴生蝶！剩余化蝶护命次数：%d", owner._shuangfei_charges))
+                    end
+                end
+                owner:ListenForEvent("minhealth", owner._shuangfei_minhealth_handler)
 
                 -- 永久移速+20%
                 local hh = owner.components.hh_player
@@ -185,6 +222,17 @@ AddPrefabPostInit("world", function(inst)
                 owner._hufei_visual_butterflies = nil
                 -- 清除蝴蝶计数
                 owner._hufei_butterflies = nil
+                -- 清除套装「双飞伴生蝶」状态
+                if owner._shuangfei_minhealth_handler then
+                    owner:RemoveEventCallback("minhealth", owner._shuangfei_minhealth_handler)
+                    owner._shuangfei_minhealth_handler = nil
+                end
+                if owner._shuangfei_death_handler then
+                    owner:RemoveEventCallback("death", owner._shuangfei_death_handler)
+                    owner._shuangfei_death_handler = nil
+                end
+                owner._shuangfei_charges = nil
+                owner._shuangfei_dead = nil
                 owner._hufei_hooked = nil
             end
         end,
