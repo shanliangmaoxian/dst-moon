@@ -134,6 +134,7 @@ modimport("scripts/enchants/hanyue")      -- 寒月公主
 modimport("scripts/enchants/yufenfen")    -- 雨纷纷
 modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
+modimport("scripts/enchants/tier_display") -- 档位显示注入（名称前缀 + 飘字分色，需在所有附魔注册之后加载）
 
 -- ------------------------------------------------------------------
 -- 配方

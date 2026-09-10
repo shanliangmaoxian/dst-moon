@@ -185,5 +185,5 @@ AddPrefabPostInit("world", function(inst)
         end,
     })
 
-    _G.Moon_RegisterEnchantDrop("Legend_XIAOHUDIE", 0.01)
+    _G.Moon_RegisterEnchantDrop("Legend_XIAOHUDIE", 0)
 end)
