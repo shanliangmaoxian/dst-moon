@@ -1,14 +1,24 @@
 -- 小月亮 怪物强化 — 公共伤害工具
 -- 统一附魔伤害出口（DealDamage），含「死亡之舞」兼容限流
 -- 由 init.lua 先于两个附魔池 modimport，两个附魔池共用本工具
+-- 伤害模式由配置 MOB_ENHANCE_TRUE_DAMAGE 控制（默认关闭）：
+--   开启 → 真伤：health:DoDelta 直扣血量，无视护甲/减伤
+--   关闭 → 普伤：走 combat:GetAttacked 攻击管线，护甲/减伤/无敌帧正常生效
 
 local _G = GLOBAL
 local GetTime = _G.GetTime
+
+-- 伤害模式（config.lua 先于本文件加载，MOON_CFG 已就绪）
+local TRUE_DAMAGE = _G.MOON_CFG ~= nil and _G.MOON_CFG.MOB_ENHANCE_TRUE_DAMAGE == true
 
 -- 限流状态（模块私有 upvalue，不污染全局）
 local cooldowns = {}
 local cooldown_ttl = 0.5    -- 同一怪物对同一死亡之舞玩家的附魔伤害冷却（秒）
 local sweep_counter = 0
+
+-- 普伤管线重入保护：GetAttacked 会触发目标的 "attacked" 事件，
+-- 目标若也是附魔怪会回调 DealDamage 造成递归；管线期间嵌套调用一律退回 DoDelta
+local in_combat_pipeline = false
 
 -- 目标是否携带「死亡之舞」效果（德·忍耐 附带，存于 HH 附魔框架效果系统）
 -- HH 框架的 API 全局名是被混淆的梗字符串（Ciallo～(∠・ω< )⌒★），硬编码脆弱：
@@ -59,6 +69,18 @@ _G.Moon_MobEnhanceDealDamage = function(source, target, damage, cause)
             sweep_counter = 0
             Sweep(now)
         end
+    end
+
+    -- 普伤模式（默认）：走标准攻击管线，护甲/减伤/无敌帧正常生效
+    -- 管线期间被嵌套调用（附魔怪互反伤等）时退回 DoDelta，防递归
+    if not TRUE_DAMAGE and not in_combat_pipeline and target.components.combat then
+        in_combat_pipeline = true
+        local ok = pcall(target.components.combat.GetAttacked, target.components.combat, source, damage)
+        in_combat_pipeline = false
+        if ok then
+            return
+        end
+        -- 管线调用异常则继续走直扣兜底，保证伤害必然落地
     end
 
     target.components.health:DoDelta(-damage, false, cause or "mob_enchant")

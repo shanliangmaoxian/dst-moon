@@ -179,6 +179,16 @@ configuration_options = {
         default = 1.0,
     },
     {
+        name = "MOB_ENHANCE_TRUE_DAMAGE",
+        label = "附魔伤害真伤",
+        hover = "开启后怪物附魔伤害（反伤/反击/溅射等）无视护甲直接扣血；关闭则走普通攻击管线，护甲和减伤可正常减免（需开启怪物强化）",
+        options = {
+            { description = "开启", data = true },
+            { description = "关闭", data = false },
+        },
+        default = false,
+    },
+    {
         name = "MOB_ENHANCE_EXCLUDE",
         label = "排除怪物/禁用附魔,在MOB_ENHANCE_EXCLUDE表中添加",
         hover = "在此表中添加要排除的内容，支持两种：怪物 prefab 名（如 'pigman'）→ 该怪物不强化；附魔 ID 或附魔中文名（如 'MOB_YUEBAN'、'月半'）→ 该附魔不再抽取。\n格式: {'pigman','月半','哎哟'}\n留空表则全部启用（需开启怪物强化）",
