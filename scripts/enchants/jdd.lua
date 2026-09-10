@@ -10,7 +10,7 @@ if not CFG.ENABLE_MORE_ENCHANTS then return end
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
-    GLOBAL.AddSpecialEquipEffect("Legend_WJBD", {
+    GLOBAL.AddSpecialEquipEffect("Legend_JDD", {
         name = "急冻冻",
         client_text = "急\n冻冻",
         desc = "攻击20%几率冰冻目标2秒\n冰冻破碎时引发冰爆(300%范围伤害)\n对冰冻目标伤害+50%",

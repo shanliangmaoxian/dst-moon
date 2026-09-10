@@ -57,6 +57,7 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_FAY          = "T2",  -- 妖精庇护：8%已损失真伤
     Legend_GANFAN       = "T2",  -- 干饭人：进食叠层
     Legend_GENZHE       = "T2",  -- 我就跟着混：队友光环
+    Legend_JDD          = "T2",  -- 急冻冻：20%冰冻+冰爆AoE（已重新启用，modmain 在加载）
     Legend_LANQIU       = "T2",  -- 篮球：连击叠层
     Legend_LAOSHI       = "T2",  -- 老师怜悯：每日锻体碎片
     Legend_MLTT         = "T2",  -- 麻辣兔头：移速+假身
@@ -87,11 +88,4 @@ TUNING.MOON_ENCHANT_TIERS = {
     -------------------------------------------------------------
     Legend_LIANGGONG = "T4",    -- 良弓藏：挂机玩具
 
-    -------------------------------------------------------------
-    -- 已停用（modmain 注释中）：如重新启用，按档位补回
-    -- Legend_MXM          = "T2",  -- 是萌新喵：免死+高血增伤
-    -- Legend_WJBD         = "T3",  -- 急冻冻：冰冻系
-    -- Legend_ZD_BUTTERFLY = "T1",  -- 紫蝶：免死满血复活
-    -- Legend_JIUYUE       = "T4",  -- 九月：纯特效
-    -------------------------------------------------------------
 }
