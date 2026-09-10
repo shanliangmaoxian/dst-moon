@@ -180,7 +180,7 @@ configuration_options = {
     },
     {
         name = "MOB_ENHANCE_TRUE_DAMAGE",
-        label = "附魔伤害真伤",
+        label = "怪物附魔是否开启真伤",
         hover = "开启后怪物附魔伤害（反伤/反击/溅射等）无视护甲直接扣血；关闭则走普通攻击管线，护甲和减伤可正常减免（需开启怪物强化）",
         options = {
             { description = "开启", data = true },
