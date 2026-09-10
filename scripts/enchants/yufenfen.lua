@@ -1,6 +1,6 @@
 -- 小月亮 附魔：雨纷纷
--- 锁定满雨露，无视雨露值带来的影响（扣san、手滑），限伤1%，无视地形，
--- 攻击结算时伤害减少1000%，不会吸引生物仇恨（如果攻击倍率≥3，改为嘲讽并失去限伤），
+-- 锁定满雨露，无视雨露值带来的影响（扣san、手滑），免疫冷热（HH immuneCold/immuneHot
+-- + 拦截原版温度伤害），无视地形，不吸引生物仇恨（攻击倍率≥3时改为嘲讽），
 -- 受到即死效果时，消耗99%耐久免疫（不足99%或者无耐久则不生效）
 -- 只能附魔在伞上（雨伞，暗影伞，花伞等）
 -- “饥荒最忧郁之人”
@@ -20,7 +20,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_YUFENFEN", {
         name = "雨纷纷",
         client_text = "雨纷\n纷",
-        desc = "满雨露+无视雨露影响(扣san/手滑)\n限伤1%+无视地形+攻击伤害-1000%\n不吸引仇恨(攻击倍率≥3嘲讽且失去限伤)\n受即死伤害消耗99%伞耐久免疫",
+        desc = "满雨露+无视雨露影响(扣san/手滑)\n免疫冷热+无视地形+不吸引仇恨(倍率≥3嘲讽)\n受即死伤害消耗99%伞耐久免疫",
         check_desc = "饥荒最忧郁之人",
         can_add = false,
         only_one = true,
@@ -93,14 +93,20 @@ AddPrefabPostInit("world", function(inst)
                     owner._yufenfen_own_notrap = true
                 end
 
-                -- ============ 攻击伤害减少1000%（结算归零） ============
-                local combat = owner.components.combat
-                if combat and combat.CalcDamage then
-                    owner._yufenfen_old_calcdamage = combat.CalcDamage
-                    combat.CalcDamage = function(self, ...)
-                        return 0
-                    end
+                -- ============ 免疫冷热（HH 层，朱雀鸾凤同款） ============
+                -- HH immuneCold/immuneHot 只覆盖 HH 易冷/易热 buff，原版温度
+                -- DoT 由下方 health.DoDelta 拦截（cause "cold"/"hot"）
+                local hh = owner.components.hh_player
+                if hh then
+                    hh:AddEffectValueByKey("immuneCold", 1)
+                    hh:AddEffectValueByKey("immuneHot", 1)
                 end
+                if owner.components.hh_buff then
+                    owner.components.hh_buff:RemoveBuff("add_cold")
+                    owner.components.hh_buff:RemoveBuff("add_hot")
+                end
+
+                local combat = owner.components.combat
 
                 -- ============ 不吸引生物仇恨（默认模式） ============
                 -- 原版：ShouldAggro 检查目标 stealth tag + 目标 combat.shouldavoidaggrofn
@@ -154,7 +160,7 @@ AddPrefabPostInit("world", function(inst)
                     return true
                 end
 
-                -- ============ 限伤1% + 即死免疫（health.DoDelta / DoHHDelta） ============
+                -- ============ 免疫冷热(原版层) + 即死免疫（health.DoDelta / DoHHDelta） ============
                 local health = owner.components.health
                 if health and not health._yufenfen_hooked then
                     local oldDoDelta = health.DoDelta
@@ -163,17 +169,11 @@ AddPrefabPostInit("world", function(inst)
                     health._yufenfen_old_dohhdelta = oldDoHHDelta
                     health.DoDelta = function(self, delta, overtime, cause, ...)
                         if delta < 0 and _G.Moon_HasEffect(owner, "yufenfen") and owner:IsValid() then
-                            -- 限伤1%（嘲讽模式下失去限伤）
-                            if not owner._yufenfen_taunt then
-                                local damage = -delta
-                                local max_hp = self.maxhealth or 100
-                                local cap = max_hp * 0.01
-                                if damage > cap then
-                                    damage = cap
-                                end
-                                delta = -damage
+                            -- 免疫冷热：原版温度组件 DoT 的 cause 为 "cold"/"hot"
+                            if cause == "cold" or cause == "hot" then
+                                return oldDoDelta(self, 0, overtime, cause, ...)
                             end
-                            -- 即死免疫：限伤后仍会致死 → 消耗99%伞耐久保命
+                            -- 即死免疫：致死伤害 → 消耗99%伞耐久保命
                             if self.currenthealth + delta <= 0 then
                                 if tryImmuneInstantDeath() then
                                     delta = -self.currenthealth + 1
@@ -293,12 +293,14 @@ AddPrefabPostInit("world", function(inst)
                     owner._yufenfen_own_notrap = nil
                 end
 
-                -- 伤害归零
-                local combat = owner.components.combat
-                if combat and owner._yufenfen_old_calcdamage then
-                    combat.CalcDamage = owner._yufenfen_old_calcdamage
-                    owner._yufenfen_old_calcdamage = nil
+                -- 免疫冷热（HH 层）
+                local hh = owner.components.hh_player
+                if hh then
+                    hh:ReduceEffectValueByKey("immuneCold", 1)
+                    hh:ReduceEffectValueByKey("immuneHot", 1)
                 end
+
+                local combat = owner.components.combat
 
                 -- 仇恨
                 if combat then
@@ -344,5 +346,6 @@ AddPrefabPostInit("world", function(inst)
         end,
     })
 
-    _G.Moon_RegisterEnchantDrop("Legend_YUFENFEN", 0.01)
+    -- T0 专属获取档：不入掉落池，注册值 0 仅用于 tier_display 显示与飘字
+    _G.Moon_RegisterEnchantDrop("Legend_YUFENFEN", 0)
 end)

@@ -39,6 +39,7 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_LDG              = "T0",  -- 劳动最光荣
     Legend_XYCZ             = "T0",  -- 幸运橙汁
     Legend_CHANGPI          = "T0",  -- 长臂
+    Legend_YUFENFEN         = "T0",  -- 雨纷纷：满雨露+免疫冷热+免即死（仅伞）
 
     -------------------------------------------------------------
     -- T1 强力
@@ -81,7 +82,6 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_XPING        = "T2",  -- 心平气和：套装防御位
     Legend_YANGMAOKE    = "T2",  -- 养猫客：浣猫挡刀
     Legend_YOUJISHUCAI  = "T2",  -- 有机蔬菜：料理翻倍
-    Legend_YUFENFEN     = "T2",  -- 雨纷纷：限伤1%（特化，仅伞）
     Legend_ZIDIE        = "T2",  -- 紫蝶：分身
 
     -------------------------------------------------------------
