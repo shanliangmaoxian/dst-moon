@@ -1,9 +1,9 @@
 -- 小月亮商店：召唤群友
 -- 商店配方 MoonShop_moon_qunyou_summon（20 个大肉，猪皮图标）制作后，
 -- 原地生成瞬发实体 moon_qunyou_summon → 在制作玩家身边召唤 1 只猪人群友：
---   每次兑换只出 1 只，玩家周边最多同时 N 只（上限 = 名字数量，一个名字一只）；
---   群友各有名字（与槽位一一对应，保证不重名）+随机骚话（参考 demo/2944389000_玛言玛语），跟随玩家打架，一直存活不消失；
---   不可被攻击（notarget + noattack + SetInvincible 三层）；群友无敌不会死，故无补员；
+--   每次兑换只出 1 只，玩家周边最多同时 N 只（上限 = MAX_PIGS）；
+--   群友各有名字（与槽位一一对应，保证不重名）+随机骚话（参考 demo/2944389000_玛言玛语），跟随玩家打架；
+--   不可被攻击（notarget + noattack + SetInvincible 三层）；存在 PIG_LIFETIME 秒后到期消失（到期前 10 秒告别），清槽位后可重新兑换补员；
 --   传送跟随：玩家传送（法杖/虫洞/雕像复活）后群友不会自动跟上（follower 的 GoToEntity 有距离上限），每 10 秒检查一次，超 40 码直接瞬移到玩家身边。
 -- 附魔版 scripts/enchants/qunyou.lua 保持原 5 只设定，本文件为商店版独立参数。
 
@@ -24,7 +24,7 @@ end
 
 -- ======== 群友配置 ========
 local FOLLOW_TELEPORT_DIST = 40 -- 群友距玩家超过该距离视为传送掉队，直接拉回身边（follower GoToEntity 上限约 40 码）
--- 群友一直存活+无敌：不设 PIG_LIFETIME 到期移除、无补员（不会死）；被其他机制移除时清槽位
+local PIG_LIFETIME = 480 -- 群友存在时间（秒），480 = 1 个游戏日；到期自动消失并清槽位（可重新兑换补员）；设为 nil 恢复永久存活
 local PIG_NAMES = {           -- 群友名字池（一个名字一只，MAX_PIGS = #PIG_NAMES 自动跟随）
     "毛旭猪", "紫蝶猪", "番茄炒蛋猪",  "秀猪",
     "无欲无求猪",  "球猪", "哎哟猪", "fay猪",
@@ -165,7 +165,22 @@ local function spawn_qunyou(owner, slot)
 
     owner._moon_qunyou_pigs[slot] = pig
 
-    -- 一直存活+无敌：不设到期移除；被其他机制移除时清槽位（无补员）
+    -- 存在时间：到期自动消失（Remove 触发 onremove 清槽位，可重新兑换补员）
+    if PIG_LIFETIME then
+        -- 到期前 10 秒预告告别
+        pig:DoTaskInTime(PIG_LIFETIME - 10, function()
+            if pig:IsValid() and pig.components.talker then
+                pig.components.talker:Say(name .. "：时间到了，我先撤啦~")
+            end
+        end)
+        pig:DoTaskInTime(PIG_LIFETIME, function()
+            if pig:IsValid() then
+                pig:Remove()
+            end
+        end)
+    end
+
+    -- 被其他机制移除时清槽位
     pig:ListenForEvent("onremove", function()
         clear_slot(owner, slot, pig)
     end)
@@ -175,7 +190,7 @@ end
 
 -- 给 owner 召唤 1 只群友（兑换触发）：每次兑换只出 1 只
 -- 重复兑换 = 有空槽就再补 1 只（不清理已有群友）；满 MAX_PIGS 只则提示不再出
--- 群友无敌不会死，无补员任务；传送跟随任务随玩家实体存活（玩家下线自动销毁）
+-- 群友到期自动消失（PIG_LIFETIME），槽位清空后可重新兑换；传送跟随任务随玩家实体存活（玩家下线自动销毁）
 function _G.Moon_Qunyou_SummonGroup(owner)
     if not (owner and owner:IsValid() and owner.Transform) then return end
     if owner:HasTag("playerghost") then return end
@@ -271,7 +286,7 @@ end
 
 -- RECIPE_DESC 需在 PIG_NAMES/MAX_PIGS 定义之后赋值（描述拼接名字数量，自动跟随）
 if _G.STRINGS and _G.STRINGS.RECIPE_DESC then
-    _G.STRINGS.RECIPE_DESC.MOONSHOP_MOON_QUNYOU_SUMMON = "20 个大肉召唤 1 只猪人群友\n最多同时 " .. MAX_PIGS .. " 只（一猪一名），各有名字，跟随打架\n一直存活+不可被攻击"
+    _G.STRINGS.RECIPE_DESC.MOONSHOP_MOON_QUNYOU_SUMMON = "20 个大肉召唤 1 只猪人群友\n最多同时 " .. MAX_PIGS .. " 只（一猪一名），各有名字，跟随打架\n不可被攻击，存在 1 个游戏日后消失"
 end
 
 -- 注意：RegisterPrefabs 不在 mod 沙箱 env 显式提供，需经 GLOBAL 访问
