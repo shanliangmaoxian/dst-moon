@@ -11,8 +11,8 @@ AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
     GLOBAL.AddSpecialEquipEffect("Legend_WJBD", {
-        name = "烷基八氮",
-        client_text = "烷基\n八氮",
+        name = "急冻冻",
+        client_text = "急\n冻冻",
         desc = "攻击20%几率冰冻目标2秒\n冰冻破碎时引发冰爆(300%范围伤害)\n对冰冻目标伤害+50%",
         check_desc = "冰冻结界，化学之力！",
         can_add = false,

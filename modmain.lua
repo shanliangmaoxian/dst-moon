@@ -86,12 +86,11 @@ modimport("scripts/enchants/tier_config")  -- 附魔档位中央表（需在所�
 modimport("scripts/enchants/quickcast")
 modimport("scripts/enchants/drop_utils")
 modimport("scripts/enchants/mx_health")
--- modimport("scripts/enchants/zd_butterfly") 紫蝶去掉
 modimport("scripts/enchants/fqcd_sanity")
 modimport("scripts/enchants/myxl_level")
 modimport("scripts/enchants/yzdx")
 modimport("scripts/enchants/wywq")
--- modimport("scripts/enchants/wjbd")   烷基八氮去掉
+modimport("scripts/enchants/jdd")
 modimport("scripts/enchants/lanqiu")
 modimport("scripts/enchants/aiyo")
 modimport("scripts/enchants/fay")
@@ -99,13 +98,11 @@ modimport("scripts/enchants/yzq")
 modimport("scripts/enchants/mgcy")
 modimport("scripts/enchants/kongbai")
 modimport("scripts/enchants/strawberry")
--- modimport("scripts/enchants/mxm")  -- 萌新已注释
 modimport("scripts/enchants/gugugu")
 modimport("scripts/enchants/ganfan")
 modimport("scripts/enchants/hufei")
 modimport("scripts/enchants/qianyue") 
 modimport("scripts/enchants/xping")
--- modimport("scripts/enchants/jiuyue") -- 九月已注释，后续可能重做
 modimport("scripts/enchants/genzhe")
 modimport("scripts/enchants/suansuancao")
 modimport("scripts/enchants/panghu")
@@ -136,9 +133,6 @@ modimport("scripts/enchants/xiaohudie")
 modimport("scripts/enchants/hanyue")      -- 寒月公主
 modimport("scripts/enchants/yufenfen")    -- 雨纷纷
 modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
--- modimport("scripts/enchants/lihuaxue")
--- modimport("scripts/enchants/xinshidi")
-
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
 
 -- ------------------------------------------------------------------
