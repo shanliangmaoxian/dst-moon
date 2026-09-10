@@ -27,6 +27,7 @@ Assets = {
 
 PrefabFiles = {
     "lmoon_effect_stones",
+    "lmoon_stone_album",
 }
 -- 骰子 RPC 在最顶部注册（确保客户端 MOD_RPC 表正确填充）
 AddModRPCHandler("LittleMoon", "RollDice", function(player)
@@ -140,6 +141,7 @@ modimport("scripts/enchants/tier_display") -- 档位显示注入（名称前缀 
 -- 配方
 -- ------------------------------------------------------------------
 modimport("scripts/recipes/recipe_stone") -- 附魔石配方
+modimport("scripts/ui/album_drag")        -- 附魔收集册窗口拖动（客户端 UI）
 
 
 

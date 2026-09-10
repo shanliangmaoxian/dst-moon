@@ -82,6 +82,7 @@ local shop_localization = {
     ["MoonShop_moonstorm_spark"]              = { name = "月熠",       desc = "5 个月亮碎片兑换 1 个月熠" },
     ["MoonShop_shijizhihua_bulb"]             = { name = "世纪之花球茎", desc = "原地放置，召唤世纪之花" },
     ["MoonShop_star_brooch"]                  = { name = "星辰胸针",   desc = "1 个老师怜悯附魔石 + 60 个锻体碎片 + 666 魔法值兑换\n只能是老师怜悯这个附魔兑换，其他附魔无效" },
+    ["MoonShop_lmoon_stone_album"]            = { name = "附魔收集册", desc = "莎草纸 2 + 月岩 5 + 紫宝石 1 兑换 1 本附魔收集册\n同词条附魔石放入自动归拢堆叠，取出词条不丢（需 HH 附魔模组）" },
 }
 
 -- 标题/描述兜底 key（recipe.name 大写）在两端 mod 加载时写入（modmain 蓝图兜底只填缺失项，不会覆盖）
@@ -244,6 +245,31 @@ local function InitMoonShop()
             end
         end
         print("[小月亮商店] 寻宝卷轴兑换注册完成，共 " .. tally_count .. " 件")
+    end
+
+    -- 附魔收集册兑换: 莎草纸2 + 月岩5 + 紫宝石1（原蓝图配方迁移至商店，不再注册制作栏蓝图）
+    if CFG.ENABLE_MORE_ENCHANTS and hh_enabled then
+        local album_recipe_id = "MoonShop_lmoon_stone_album"
+        if not (AllRecipes and AllRecipes[album_recipe_id]) then
+            AddRecipe2(
+                album_recipe_id,
+                {
+                    Ingredient("papyrus", 2),
+                    Ingredient("moonrocknugget", 5),
+                    Ingredient("purplegem", 1),
+                },
+                TECH.NONE,
+                {
+                    product = "lmoon_stone_album",
+                    nounlock = true,
+                    numtogive = 1,
+                    atlas = GetInventoryItemAtlas("hh_effect_tally.tex") or "images/inventoryimages.xml",
+                    image = "hh_effect_tally.tex",
+                },
+                filter_list
+            )
+            print("[小月亮商店] 附魔收集册兑换注册成功")
+        end
     end
 
     -- 灵魂兑换 (需要模组 2526778484)

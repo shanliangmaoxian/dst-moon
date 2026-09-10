@@ -8,7 +8,16 @@ if not GLOBAL.Moon_IsHHEnabled() then return end
 local hh_utils = require("moon_utils/hh_enhants")
 local table_utils = require("moon_utils/table")
 
-local old_add_special_equip_effect = GLOBAL["AddSpecialEquipEffect"]
+-- AddSpecialEquipEffect 由 HH 自己的 modmain（main/hh_api.lua）在 HH 加载时才写入 GLOBAL。
+-- Moon_IsHHEnabled() 只查配置里"是否启用"，不保证 HH 本轮已加载完成
+-- （HH 加载顺序靠后 / HH 本体缺失或加载失败 / 配置残留都会出现）。
+-- strict.lua 对未声明全局的读取会抛错并炸掉整个游戏启动链（ModSafeStartup 失败），
+-- 因此必须用 rawget 绕过 strict 检查 + 类型防御，缺函数时优雅跳过。
+local old_add_special_equip_effect = GLOBAL.rawget(GLOBAL, "AddSpecialEquipEffect")
+if type(old_add_special_equip_effect) ~= "function" then
+    print("[LittleMoon] HH AddSpecialEquipEffect 未找到（HH 未启用或尚未加载），跳过附魔拓展功能")
+    return
+end
 GLOBAL["AddSpecialEquipEffect"] = function(effect_id, data)
     old_add_special_equip_effect(effect_id, data)
     HH_EQUIP_BUFF_LIST[effect_id]["slots"] = data.slots or 1
