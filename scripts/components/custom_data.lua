@@ -43,7 +43,7 @@ function CustomData:OnLoad(data)
     for key, instance_data in pairs(self.data) do
         local key_upgrades = multivalue_upgrades[key]
         if key_upgrades and #key_upgrades > 0 then
-            local current_version = instance_data.version
+            local current_version = instance_data.version + 1 -- 从下个版本开始执行
             local latest_data = instance_data.data
             local current_upgrader = key_upgrades[current_version]
             -- 从数据的版本开始依次执行
