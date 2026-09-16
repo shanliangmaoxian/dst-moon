@@ -2,7 +2,7 @@
 -- 改个命名空间防止和其它 Mod 混淆
 GLOBAL.LMOON = {}
 
-function GLOBAL.table.map(table, fn)
+function GLOBAL.LMOON.map(table, fn)
     local results = {}
     for i, v in ipairs(table) do
         GLOBAL.table.insert(results, fn(v, i, table))

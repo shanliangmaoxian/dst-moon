@@ -329,7 +329,7 @@ AddPrefabPostInit("world", function(inst)
             end
             local cp_custom_data = equip.components and equip.components.custom_data
             local memory_list = cp_custom_data and cp_custom_data:Get(MEMORY_KEY) or {}
-            local memory_list_str = table.concat(table.map(memory_list, memory_display_str), ", ")
+            local memory_list_str = table.concat(LMOON.map(memory_list, memory_display_str), ", ")
             return string.format(
                        "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 进度：%s/%s (记忆外 +3，记忆中 +1)\n击杀记忆(5)：%s\n================================",
                        score, EFFECT_TEST_SCORE, memory_list_str)
