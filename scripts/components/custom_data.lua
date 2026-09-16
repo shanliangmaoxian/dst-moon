@@ -52,7 +52,7 @@ function CustomData:OnLoad(data)
                 current_version = current_version + 1
                 current_upgrader = key_upgrades[current_version]
             end
-            self.data[key] = latest_data
+            self.data[key] = {data = latest_data, version = current_version - 1}
         end
     end
 end
