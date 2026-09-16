@@ -10,6 +10,7 @@ end)
 
 function CustomData:Get(key) return self.data[key] end
 function CustomData:Set(key, value)
+    -- 自动版本号的设计遵循“没有改动就不需要升级”的原则
     local version = multivalue_upgrades[key] and #multivalue_upgrades[key] or 1
     self.data[key] = {data = value, version = version}
 end
@@ -54,7 +55,11 @@ function CustomData:OnLoad(data)
             最新版本如果和数据版本相同，则意味着该数据不需要升级;
             最新版本如果和数据版本相同，则意味着该版本的数据已经蕴含了对应版本的升级程序，所以不需要从对应版本开始升级;
 
+            元升级后的数据和没有对应任何升级程序的数据含义是一致的，若未来增加对应的升级程序，它们都从 [1] 开始;
+
             若最新版本为 7，数据版本为 3，则该数据需要经历的升级程序依次为：[4]、[5]、[6]、[7]
+
+        自动版本号的设计遵循“没有改动就不需要升级”的原则;
     --]]
 
     -- 执行多值组件升级程序
