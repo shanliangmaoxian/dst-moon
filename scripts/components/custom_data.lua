@@ -37,7 +37,7 @@ function CustomData:OnLoad(data)
         -- 元升级（等到现存旧组件数据都消失时，可以安全删除
         -- 在元升级前，实例数据中不存在 version 和 data 键，所以这是安全的
         if instance_data and not instance_data.version and not instance_data.data then
-            instance_data = {data = instance_data.data, version = 0}
+            self.data[key] = {data = instance_data.data, version = 0}
         end
     end
 
