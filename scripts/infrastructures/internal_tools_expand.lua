@@ -1,3 +1,7 @@
+
+-- 改个命名空间防止和其它 Mod 混淆
+GLOBAL.LMOON = {}
+
 function GLOBAL.table.map(table, fn)
     local results = {}
     for i, v in ipairs(table) do
@@ -11,10 +15,30 @@ function GLOBAL.table.filter(table, fn)
     for i, v in ipairs(table) do 
         local result = fn(v, i, table)
         if result then
-            GLOBAL.table.insert(results, result)
+            GLOBAL.table.insert(results, v)
         end
     end
     return results
+end
+
+function GLOBAL.LMOON.filter(table, fn)
+    local results = {}
+    for i, v in ipairs(table) do 
+        local result = fn(v, i, table)
+        if result then
+            GLOBAL.table.insert(results, v)
+        end
+    end
+    return results
+end
+
+function GLOBAL.table.some(table, fn)
+    for i, v in ipairs(table) do 
+        if fn(v, i, table) then
+            return true
+        end
+    end
+    return false
 end
 
 function GLOBAL.table.merge(...)

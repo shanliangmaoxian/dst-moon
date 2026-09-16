@@ -7,6 +7,7 @@ local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
+local is_hanyue_level_simple = CFG.HANYUE_TEST_LEVEL == 0
 
 local equip_util = require("moon_utils/asserts")
 
@@ -23,7 +24,25 @@ local EFFECT_NAME = "Legend_HANYUE"
 local EFFECT_TEST_NAME = "Legend_HANYUE_TEST"
 
 local EFFECT_TEST_MEMORY_CAP = 5
-local EFFECT_TEST_SCORE = 40
+local EFFECT_TEST_SCORE = 120
+
+local function memory_display_str(memory)
+    local readable_name = STRINGS.NAMES[string.upper(memory.prefab)] or "??"
+    if memory.count > 1 then
+        return string.format("%s*%s", readable_name, memory.count or 1)
+    end
+    return string.format("%s", readable_name)
+end
+
+local function get_memory_readable_name(memory)
+    return STRINGS.NAMES[string.upper(memory.prefab)] or "??"
+end
+
+local function is_memory_same_by(prefab)
+    return function (current_memory)
+        return prefab == current_memory.prefab
+    end
+end
 
 local function slice(arr, start, stop)
     local result = {}
@@ -92,23 +111,30 @@ local function do_delta_score(weapon, killer, data)
     local cp_hh_equip = weapon.components.hh_equip
 
     -- 记忆中杀过的 boss
-    local memory = cp_custom_data:Get(MEMORY_KEY) or {}
+    local memories = cp_custom_data:Get(MEMORY_KEY) or {}
     local progress = cp_counter:GetCount(PROGRESS_KEY)
 
     local victim = data.victim
     if victim:IsValid() and not victim:HasTag("player") and
         victim:HasTag("epic") and not killer.components.health:IsDead() then
 
-        if table.contains(memory, victim.prefab) then -- 已在记忆中就忽略
-            return
+        local delta_score = 3
+        local matched_memories = LMOON.filter(memories, is_memory_same_by(victim.prefab))
+        -- 已在记忆中就忽略或降低分数，简单难度下增加 1 分，一般难度不加
+        if #matched_memories > 0 then
+            delta_score = is_hanyue_level_simple and 1 or 0;
+             -- 一般只有1个或0个匹配，但是为了更加健壮需要全部替换
+            for _, matched_memory in ipairs(matched_memories) do
+                matched_memory.count = matched_memory.count + 1
+            end
+        else
+            -- 更新记忆
+            table.insert(memories, { prefab = victim.prefab, count = 1 })
+            memories = slice(memories, -5, 0) -- 仅保留最新的 5 个，越靠后越新
         end
 
-        -- 更新记忆
-        table.insert(memory, victim.prefab)
-        memory = slice(memory, -5, 0) -- 仅保留最新的 5 个，越靠后越新
-
-        cp_counter:DoDelta(PROGRESS_KEY, 1)
-        cp_custom_data:Set(MEMORY_KEY, memory)
+        cp_counter:DoDelta(PROGRESS_KEY, delta_score)
+        cp_custom_data:Set(MEMORY_KEY, memories)
 
         -- 更新试炼进度，展示在武器详情页的信息
         cp_hh_equip:UpdateEffectValueByName(EFFECT_TEST_NAME,
@@ -119,10 +145,6 @@ local function do_delta_score(weapon, killer, data)
             upgrade_effect(weapon)
         end
     end
-end
-
-local function get_prefab_readable_name(prefab)
-    return STRINGS.NAMES[string.upper(prefab)] or "??"
 end
 
 AddPrefabPostInit("world", function(inst)
@@ -293,25 +315,24 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_TEST_NAME, {
         name = "寒月试炼",
         client_text = "寒月\n试炼",
-        desc = string.format("完成试炼此效果变为【寒月公主】\n试炼: 使用该武器交替击杀 5 种不同名 BOSS %s 次", EFFECT_TEST_SCORE),
+        desc = string.format("完成试炼此效果变为【寒月公主】\n试炼: 使用该武器击杀 BOSS 达到 %s 分", EFFECT_TEST_SCORE),
         recipes = {"moon_effect_stone_hanyue_test"},
         desc_dync = function(equip, effect_value)
             -- 计数直接读 counter 组件，不依赖 UpdateEffectValueByName 回写的 value
             -- (词条实例名与效果 id 不一致时回写会失效，导致计数永远停在 0)
-            local count = effect_value or 0
+            local score = effect_value or 0
             if equip.components and equip.components.counter then
                 local live_count = equip.components.counter:GetCount(PROGRESS_KEY)
-                if live_count and live_count > (tonumber(count) or 0) then
-                    count = live_count
+                if live_count and live_count > (tonumber(score) or 0) then
+                    score = live_count
                 end
             end
             local cp_custom_data = equip.components and equip.components.custom_data
-            local memory_list = cp_custom_data and
-                table.map(cp_custom_data:Get(MEMORY_KEY) or {}, get_prefab_readable_name) or {}
-            local memory_list_str = table.concat(memory_list, ", ")
+            local memory_list = cp_custom_data and cp_custom_data:Get(MEMORY_KEY) or {}
+            local memory_list_str = table.concat(table.map(memory_list, memory_display_str), ", ")
             return string.format(
-                       "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 使用该武器交替击杀 5 种不同名 BOSS：%s/%s\n最近击杀：%s\n================================",
-                       count, EFFECT_TEST_SCORE, memory_list_str)
+                       "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 进度：%s/%s (记忆外 +3，记忆中 +1)\n击杀记忆(5)：%s\n================================",
+                       score, EFFECT_TEST_SCORE, memory_list_str)
         end,
         check_desc = "武器栏",
         obtain_desc = "合成",
