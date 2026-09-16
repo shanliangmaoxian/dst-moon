@@ -10,7 +10,7 @@ if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
     
     if is_hanyue_level_simple then
         -- 寒月试炼附魔石配方 - 简单
-        AddRecipe2('moon_effect_stone_hanyue_test', table.filter({
+        AddRecipe2('moon_effect_stone_hanyue_test', LMOON.filter({
             Ingredient('hh_essence', 999),
             Ingredient('ice', 999),
             Ingredient('bluegem', 999)
@@ -23,7 +23,7 @@ if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
         {'MAGIC'})
     else
         -- 寒月试炼附魔石配方 - 一般
-        AddRecipe2('moon_effect_stone_hanyue_test', table.filter({
+        AddRecipe2('moon_effect_stone_hanyue_test', LMOON.filter({
             HHEffectStoneIngredient("target_percent_damage"),           -- 撕裂
             HHEffectStoneIngredient("autumn_god"),                      -- 秋季战神
 
@@ -51,7 +51,7 @@ if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
 
 
     -- 快速施法 配方1
-    AddRecipe2('lmoon_effect_stone_quickcast1', table.filter({
+    AddRecipe2('lmoon_effect_stone_quickcast1', LMOON.filter({
         HHEffectStoneIngredient("fast_act"),           -- 快速交互
         Ingredient('opalpreciousgem', 10),
         Ingredient('purplegem', 30)
@@ -64,7 +64,7 @@ if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
     },
     {'MAGIC'})
     -- 快速施法 配方2
-    AddRecipe2('lmoon_effect_stone_quickcast3', table.filter({
+    AddRecipe2('lmoon_effect_stone_quickcast3', LMOON.filter({
         HHEffectStoneIngredient("Legend_LIANLIAN"),    -- 无意识的恋恋
         Ingredient('opalpreciousgem', 10),
         Ingredient('purplegem', 30)
@@ -78,7 +78,7 @@ if CFG.ENABLE_MORE_ENCHANTS and GLOBAL.Moon_IsHHEnabled() then
     {'MAGIC'})
     -- 快速施法 配方3
     if enable_underline then
-        AddRecipe2('lmoon_effect_stone_quickcast2', table.filter({
+        AddRecipe2('lmoon_effect_stone_quickcast2', LMOON.filter({
             HHEffectStoneIngredient("Legend_diligence_stone"), -- 德★勤奋
             Ingredient('opalpreciousgem', 10),
             Ingredient('purplegem', 30)

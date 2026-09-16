@@ -8,6 +8,8 @@ local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
 local is_hanyue_level_simple = CFG.HANYUE_TEST_LEVEL == 0
+local BORING_SCORE = is_hanyue_level_simple and 1 or 0
+local NOVEL_SCORE = 3
 
 local equip_util = require("moon_utils/asserts")
 
@@ -42,18 +44,6 @@ local function is_memory_same_by(prefab)
     return function (current_memory)
         return prefab == current_memory.prefab
     end
-end
-
-local function slice(arr, start, stop)
-    local result = {}
-    stop = stop or #arr
-
-    stop = stop <= 0 and math.max(1, #arr + stop + 1) or stop
-    start = start <= 0 and math.max(1, #arr + start + 1) or start
-
-    for i = start, stop do table.insert(result, arr[i]) end
-
-    return result
 end
 
 -- 查找试炼词条(兼容旧存档): 精确匹配失败时, 按"配置同一性"(别名键 __recipe__*
@@ -118,19 +108,20 @@ local function do_delta_score(weapon, killer, data)
     if victim:IsValid() and not victim:HasTag("player") and
         victim:HasTag("epic") and not killer.components.health:IsDead() then
 
-        local delta_score = 3
+        local delta_score = NOVEL_SCORE
         local matched_memories = LMOON.filter(memories, is_memory_same_by(victim.prefab))
-        -- 已在记忆中就忽略或降低分数，简单难度下增加 1 分，一般难度不加
+
+        -- 更新记忆
         if #matched_memories > 0 then
-            delta_score = is_hanyue_level_simple and 1 or 0;
+            -- 已在记忆中就忽略或降低分数，简单难度下增加 1 分，一般难度不加
+            delta_score = BORING_SCORE
              -- 一般只有1个或0个匹配，但是为了更加健壮需要全部替换
             for _, matched_memory in ipairs(matched_memories) do
                 matched_memory.count = matched_memory.count + 1
             end
         else
-            -- 更新记忆
             table.insert(memories, { prefab = victim.prefab, count = 1 })
-            memories = slice(memories, -5, 0) -- 仅保留最新的 5 个，越靠后越新
+            memories = LMOON.slice(memories, -5, 0) -- 仅保留最新的 5 个，越靠后越新
         end
 
         cp_counter:DoDelta(PROGRESS_KEY, delta_score)
@@ -145,6 +136,19 @@ local function do_delta_score(weapon, killer, data)
             upgrade_effect(weapon)
         end
     end
+end
+
+local function format_display(score, memory_list)
+    local memory_list_str = table.concat(LMOON.map(memory_list, memory_display_str), ", ")
+
+    local title_str = string.format("完成试炼此效果变为【寒月公主】")
+    local separator_header_str = string.format("=============寒月试炼=============")
+    local separator_footer_str = string.format("================================")
+    local progress_str = string.format("试炼进度：%s/%s (记忆外 +%s，记忆中 +%s)", score, EFFECT_TEST_SCORE, NOVEL_SCORE, BORING_SCORE)
+    local memories_str = #memory_list > 0
+        and string.format("击杀记忆(%s)：%s", EFFECT_TEST_MEMORY_CAP, memory_list_str)
+        or nil
+    return table.concat(LMOON.filter({title_str, separator_header_str, progress_str, memories_str, separator_footer_str}, truly), "\n")
 end
 
 AddPrefabPostInit("world", function(inst)
@@ -329,10 +333,7 @@ AddPrefabPostInit("world", function(inst)
             end
             local cp_custom_data = equip.components and equip.components.custom_data
             local memory_list = cp_custom_data and cp_custom_data:Get(MEMORY_KEY) or {}
-            local memory_list_str = table.concat(LMOON.map(memory_list, memory_display_str), ", ")
-            return string.format(
-                       "完成试炼此效果变为【寒月公主】。\n=============寒月试炼=============\n试炼: 进度：%s/%s (记忆外 +3，记忆中 +1)\n击杀记忆(5)：%s\n================================",
-                       score, EFFECT_TEST_SCORE, memory_list_str)
+            return format_display(score, memory_list)
         end,
         check_desc = "武器栏",
         obtain_desc = "合成",
