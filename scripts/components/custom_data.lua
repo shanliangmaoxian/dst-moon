@@ -9,8 +9,10 @@ local CustomData = Class(function(self, inst)
 end)
 
 function CustomData:Get(key) return self.data[key] end
--- version 需要大于 0
-function CustomData:Set(key, value, version) self.data[key] = {data = value, version = version} end
+function CustomData:Set(key, value)
+    local version = multivalue_upgrades[key] and #multivalue_upgrades[key] or 1
+    self.data[key] = {data = value, version = version}
+end
 
 function CustomData:Clear(key) self.data[key] = nil end
 
@@ -39,14 +41,30 @@ function CustomData:OnLoad(data)
         end
     end
 
+    --[[
+        “升级程序版本”具体指的是在 multivalue_upgrades[key] 中的每个元素对应的下标位置;
+        “最新版本”：因为实现了依据 multivalue_upgrades[key] 的自动版本号，可以知道最新版本就是 multivalue_upgrades[key] 这个列表的长度;
+        “数据版本”是指“数据的版本号”，在存储时使用 multivalue_upgrades[key] 的长度作为版本号;
+
+        对于数据的升级过程，我们使用“跳过开始”的处理方式，具体为:
+            使用数据版本的下一个版本作为开始程序，然后依次执行到后续所有的升级程序;
+
+        列举以下断言以帮助避免混淆:
+            在任何时候，升级程序版本如果和数据版本相同，则意味着该数据不需要升级;
+            最新版本如果和数据版本相同，则意味着该数据不需要升级;
+            最新版本如果和数据版本相同，则意味着该版本的数据已经蕴含了对应版本的升级程序，所以不需要从对应版本开始升级;
+
+            若最新版本为 7，数据版本为 3，则该数据需要经历的升级程序依次为：[4]、[5]、[6]、[7]
+    --]]
+
     -- 执行多值组件升级程序
     for key, instance_data in pairs(self.data) do
         local key_upgrades = multivalue_upgrades[key]
         if key_upgrades and #key_upgrades > 0 then
-            local current_version = instance_data.version + 1 -- 从下个版本开始执行
             local latest_data = instance_data.data
+            local current_version = instance_data.version + 1 -- 从下个版本开始执行
             local current_upgrader = key_upgrades[current_version]
-            -- 从数据的版本开始依次执行
+            -- 从数据的下一个版本开始依次执行
             while current_upgrader do
                 latest_data = current_upgrader(latest_data)
                 current_version = current_version + 1
