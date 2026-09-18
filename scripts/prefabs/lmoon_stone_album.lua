@@ -61,15 +61,15 @@ local function AlbumItemTest(container, item, slot)
 end
 
 -- 注入容器 UI 参数（服务端 + 客户端各执行一次本文件，注册表按 prefab 名共享）
--- 13×9 = 117 格（一种词条一槽，够放下全部附魔词条）
--- 注意：album_drag.lua 的 GRID_COLS/GRID_ROWS/GRID_STEP 常量必须与此处保持一致
+-- 9×9 = 81 格（一种词条一槽，够放下全部附魔词条）
+-- 注意：album_drag.lua 的 ZONE_HALF_W / ZONE_Y_MIN 等拖动热区常量按 9×9 网格取值，须与此处保持一致
 local ALBUM_COLS = 13
 local ALBUM_ROWS = 9
 local ALBUM_SLOT_STEP = 80
 containers.params.lmoon_stone_album = {
     widget = {
         slotpos = {},
-        -- 面板边框：借用菜谱书纸张背景（原版无 13×9 箱贴图），Open 后由 album_drag 拉伸到网格大小
+        -- 面板边框：借用菜谱书纸张背景（原版无 9×9 箱贴图），Open 后由 album_drag 拉伸到网格大小
         bgatlas = "images/quagmire_recipebook.xml",
         bgimage = "quagmire_recipe_menu_bg.tex",
         -- pos：容器锚点 containerroot 在屏幕中心，设 (0,0,0) 让窗口居中
@@ -84,7 +84,8 @@ containers.params.lmoon_stone_album = {
 }
 local half_w = (ALBUM_COLS - 1) * 0.5 * ALBUM_SLOT_STEP
 local half_h = (ALBUM_ROWS - 1) * 0.5 * ALBUM_SLOT_STEP
-for y = 0, ALBUM_ROWS - 1 do
+-- 原版约定（宝箱/冰箱等）：y 从高到低生成，1 号槽在左上角，从上往下填充
+for y = ALBUM_ROWS - 1, 0, -1 do
     for x = 0, ALBUM_COLS - 1 do
         table.insert(containers.params.lmoon_stone_album.widget.slotpos,
             Vector3(ALBUM_SLOT_STEP * x - half_w, ALBUM_SLOT_STEP * y - half_h, 0))
