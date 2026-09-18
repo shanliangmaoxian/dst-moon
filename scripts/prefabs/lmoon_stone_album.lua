@@ -4,6 +4,16 @@
 
 local containers = require("containers")
 
+-- 执行环境提醒（踩过坑，改本文件前先看）：
+--   本文件由 PrefabFiles 经 loadfile 加载（mainfunctions.lua:150），跑在**游戏全局环境**
+--   里，而不是 modimport 的沙箱环境。两者差别很关键：
+--     · 沙箱里 GLOBAL 是 _G 的别名；这里没有 GLOBAL，写 GLOBAL.xxx 会直接报
+--       "variable 'GLOBAL' is not declared"（strict.lua 拦截未声明全局的读取）。
+--     · 但这里能用裸全局名（TheWorld / TUNING / Moon_Say ...），也能用 _G 本身。
+--       本 mod 用 `function _G.Moon_xxx()` 挂在真实 _G 上的跨文件函数，在这个环境里
+--       可以直接按裸名字读到（modimport 沙箱里写的是 _G 真表，不是沙箱表）。
+--   所以：绝对不要写 `local _G = GLOBAL`；需要新增全局时用 rawset(_G, ...) 绕过 strict。
+
 -- HH 附魔石注册表（跨 mod require，未启用时为 nil）
 local ok_hh, hh_enchant = pcall(require, "enums/hh_enchant")
 local HH_EQUIP_BUFF_LIST = ok_hh and hh_enchant ~= nil
@@ -131,6 +141,133 @@ local function GetAlbumDescription(inst)
     return album:GetSummary(EffectDisplayName)
 end
 
+-- ============================================================
+-- 「整理」功能支撑
+-- ============================================================
+-- 全局实例表：整理 RPC 要定位「玩家正打开的那一本收集册」。
+-- 服务端只能从容器反查 openers，而玩家对象上没有「当前打开容器」的记录，
+-- 因此维护一份弱引用集合（实体销毁后自动回收，另加 onremove 显式清理）。
+-- 挂在 _G 上：mod 热重载时表得以保留，不会丢失已登记的实例。
+-- 用 rawget/rawset 读写：本文件跑在游戏全局环境里，strict.lua 会拦未声明全局的读取，
+-- 而 rawget/rawset 直接操作原表、绕过元表，既能安全地取「可能还不存在」的表，
+-- 也避免第一次读取时被 strict 当成未声明变量报错。
+local MOON_ALBUMS = rawget(_G, "MOON_ALBUMS")
+if MOON_ALBUMS == nil then
+    MOON_ALBUMS = setmetatable({}, { __mode = "k" })
+    rawset(_G, "MOON_ALBUMS", MOON_ALBUMS)
+end
+
+-- ============================================================
+-- 整理排序依据：附魔石背景色（"整理"按钮唯一的排序键）
+-- ============================================================
+-- 「整理」只认一样东西——附魔石图标的背景色。同色的石头在册子里连成一片，
+-- 颜色组之间的先后由下面的 COLOR_ORDER 决定（行的顺序 = 整理后的顺序）。
+--
+-- 背景色取自 HH 词条配置的 client_color 字段（HH 就是拿它染附魔石图标的，
+-- 见 hh_prefabs.lua）。小月亮 / 附魔强化 / 更多附魔石 三个来源用的是同一个
+-- 字段，所以这里不需要区分来源，也不需要星级或档位，一张颜色表通吃。
+--
+-- ⚠️ 小月亮自己的附魔目前被 tier_display.lua 统一染成紫色（T0~T4 同色），
+--    所以它们在册子里会连成一大片、彼此不分先后。想让它们按档位分开，
+--    改 tier_display.lua 的 TIER_COLORS 即可，本文件不用动。
+--
+-- ★ 想调整顺序：直接移动 COLOR_ORDER 里的整行；想加新颜色，照格式加一行。
+--   表里没列的颜色会自动排到已列颜色之后（同色仍然相邻）。
+-- ============================================================
+
+-- 颜色表：{ 颜色名（仅供阅读/调试）, R, G, B }
+-- 顺序 = 整理后的先后，大致按「黑白灰 → 冷色 → 暖色」排。
+-- 里面有几个色（黑/白/浅灰/蓝/青/绿/深青）是「更多附魔石」调色板里定义、
+-- 但当前还没有词条在用的，先占好位置——将来有石头用上就不用再回来改表。
+local COLOR_ORDER = {
+    { "黑色", 0, 0, 0 },
+    { "深炭灰", 20, 20, 20 },      -- 罪★ 七原罪系列
+    { "深灰", 51, 51, 51 },
+    { "灰色", 128, 128, 128 },     -- 基础（小幸运 / 小增伤 / 元素核心 / 耐久 / 采集）
+    { "浅灰", 204, 204, 204 },
+    { "象牙白", 250, 250, 245 },   -- 德★ 七美德系列
+    { "白色", 255, 255, 255 },
+    { "深青", 0, 40, 40 },
+    { "深蓝绿", 0, 40, 80 },       -- 诡秘系列
+    { "蓝色", 0, 0, 255 },
+    { "苍穹蓝", 154, 200, 226 },   -- 精英（破命 / 死亡之舞 / 阴烛侵蚀 / 玲珑圣印）
+    { "青色", 0, 255, 255 },
+    { "紫色", 204, 0, 204 },       -- 小月亮（T0~T4 统一色）
+    { "粉色", 255, 192, 203 },     -- 枝江系列（蜜意甜心）
+    { "绿色", 0, 255, 0 },
+    { "HH默认", 101, 255, 0 },     -- 附魔强化里未指定颜色的词条
+    { "金黄", 255, 255, 0 },       -- 高级（斩杀 / 暴击伤害 / 免疫卸甲 / 大幸运 / 大增伤）
+    { "暗金", 142, 91, 0 },        -- 附魔强化指定色
+    { "橙色", 255, 128, 0 },       -- 元素系列 + 各 mod 专属
+    { "猩红", 255, 0, 0 },         -- 稀★系列 / 终幕 / 天外天环 / 超级稀有宝石
+}
+
+-- 表里没列的颜色：排在所有已列颜色之后，用 RGB 整数键当次序
+-- （保证「同色仍然相邻」且每次结果一致；键最大约 1.7e7，仍远小于下面的兜底值）
+local COLOR_UNKNOWN_BASE = 1000
+-- 完全没有颜色信息的（正常不会出现：HH 注册词条时一定会填默认背景色）：排到最后
+local COLOR_NO_COLOR = 999999999
+
+-- ------------------------------------------------------------
+-- client_color（{r,g,b,a} 浮点 0~1）→ 量化后的 RGB 整数键
+-- ------------------------------------------------------------
+-- 量化：每通道先换算成 0~255 整数，再按 QUANT 归并，最后才拼成 key。
+-- 为什么要归并：同一个颜色在不同 mod 里可能写成 0.75 和 0.753 这种肉眼无差的
+-- 近似值（实测粉色同时存在 (255,191,204) 与 (255,192,203) 两种写法），不归并
+-- 会被拆成两组、分到册子两头。归并到 16 级（每级约 6%）足以吸收这类误差，
+-- 又不会把本来不同的颜色混到一起。
+local QUANT = 16
+
+-- 单通道量化：0~255 的整数 → 归并到 QUANT 的整数倍
+local function QuantCh(v)
+    local q = math.floor(v / QUANT + 0.5) * QUANT
+    if q < 0 then return 0 end
+    if q > 255 then return 255 end
+    return q
+end
+
+-- 颜色表与词条颜色走同一个量化函数，保证两边的 key 一定能对上
+local function ColorKey(color)
+    if type(color) ~= "table" then return nil end
+    local r, g, b = color[1], color[2], color[3]
+    if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then
+        return nil
+    end
+    local qr = QuantCh(math.floor(r * 255 + 0.5))
+    local qg = QuantCh(math.floor(g * 255 + 0.5))
+    local qb = QuantCh(math.floor(b * 255 + 0.5))
+    return qr * 65536 + qg * 256 + qb
+end
+
+-- 量化后的 RGB 键 → 颜色组序号（1 起，越小越靠前）
+local COLOR_RANK = {}
+for i, c in ipairs(COLOR_ORDER) do
+    COLOR_RANK[QuantCh(c[2]) * 65536 + QuantCh(c[3]) * 256 + QuantCh(c[4])] = i
+end
+
+---- 取某个词条的整理权重（越小越靠前）
+---- 只看附魔石背景色：同色相邻，颜色组之间的次序由 COLOR_ORDER 决定；
+---- 组内的先后交给 SortByRank 用 effect_id 兜底（effect_id 唯一 → 全序，
+---- 规避 table.sort 不稳定导致同组内每次顺序不同）。
+---- 注：这里的 HH_EQUIP_BUFF_LIST 是本文件第 18~20 行 pcall(require, "enums/hh_enchant")
+----     拿到的**局部表**（与 HH 是同一张活表，tier_display.lua 改的颜色也在这里生效），
+----     不是 modimport 沙箱里那个同名全局——那个全局在本文件所在的环境里根本读不到。
+local function AlbumColorRank(effect_id)
+    local cfg = HH_EQUIP_BUFF_LIST ~= nil and HH_EQUIP_BUFF_LIST[effect_id] or nil
+    if cfg == nil then
+        return COLOR_NO_COLOR
+    end
+    local key = ColorKey(cfg.client_color)
+    if key == nil then
+        return COLOR_NO_COLOR
+    end
+    local rank = COLOR_RANK[key]
+    if rank ~= nil then
+        return rank
+    end
+    return COLOR_UNKNOWN_BASE + key
+end
+
 local assets = {
     Asset("ATLAS", "images/quagmire_recipebook.xml"),
 }
@@ -205,7 +342,35 @@ local function fn()
     inst:AddComponent("moon_album")
     inst.components.moon_album:SetupContainer()
 
+    -- 登记到全局实例表，供整理 RPC 反查（客户端不需要，只在服务端分支执行）
+    MOON_ALBUMS[inst] = true
+    inst:ListenForEvent("onremove", function()
+        MOON_ALBUMS[inst] = nil
+    end)
+
     return inst
 end
+
+-- ============================================================
+-- 整理 RPC（服务端）：把发起者正打开的收集册按附魔石背景色重排。
+-- 客户端只发请求——排序必须走服务端，容器数据与存档都在服务端。
+-- ============================================================
+AddModRPCHandler("LittleMoon", "AlbumSort", function(player)
+    if player == nil or not TheWorld.ismastersim then return end
+    for inst in pairs(MOON_ALBUMS) do
+        if inst:IsValid()
+            and inst.components.container ~= nil
+            and inst.components.container:IsOpenedBy(player)
+            and inst.components.moon_album ~= nil then
+            local n = inst.components.moon_album:SortByRank(AlbumColorRank)
+            if n > 0 then
+                Moon_Say(player, string.format("已按附魔石颜色整理 %d 种附魔石", n))
+            else
+                Moon_Say(player, "册子里没有需要整理的附魔石")
+            end
+            return
+        end
+    end
+end)
 
 return Prefab("lmoon_stone_album", fn, assets, prefabs)

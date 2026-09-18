@@ -255,6 +255,92 @@ function MoonAlbum:RestockAll()
     end
 end
 
+---- 按排序权重重排册内附魔石（"整理"按钮的服务端实现）
+---- 做法：把所有非空槽（展示石 + 后台存货）统一收进内存 → 按权重排序 →
+----       从 1 号槽起重新连续落位 → 补回展示石。顺带消除中间空洞。
+---- @param rank_of: function(effect_id) -> number，权重越小越靠前
+----        （权重表见 prefabs/lmoon_stone_album.lua 的 COLOR_ORDER：
+----         按附魔石背景色 client_color 分组，同色相邻）
+---- @return 参与整理的词条数；0 表示无需整理
+---- 注意：entries/fingerprints 是按槽位号存档的，本函数会整体改写键位——
+----       这是"整理"的预期效果（内容不丢，只是换了槽号）。
+function MoonAlbum:SortByRank(rank_of)
+    if self.busy or self.isloading or self.container == nil or rank_of == nil then
+        return 0
+    end
+
+    -- 1) 收集所有非空槽；展示石按 1 块计入，与后台存货合并成同一条
+    local items = {}
+    for slot = 1, self.numslots do
+        local display = self.container:GetItemInSlot(slot)
+        local entry = self.entries[slot]
+        local count = (display ~= nil and 1 or 0) + (entry ~= nil and entry.count or 0)
+        if count > 0 then
+            local fp = self.fingerprints[slot]
+            -- 兜底用 prefab 名：itemtestfn 已限制只收附魔石，万一有别的物品混进来，
+            -- 也必须照原样收进 items 再放回去，否则第 3 步清空时会把它弄丢
+            local effect = (display ~= nil and display.hh_effect)
+                or (fp ~= nil and fp.effect)
+                or (display ~= nil and display.prefab)
+            -- 存档记录优先取后台存货（同一词条所有石头同款）；只有展示石时现场生成一份
+            local record = (entry ~= nil and entry.data)
+                or (display ~= nil and display:GetSaveRecord())
+            if effect == nil or record == nil then
+                -- 有内容却拿不到重建信息（异常数据）：宁可放弃整理，
+                -- 也不能让第 3 步的清空把它弄丢
+                return 0
+            end
+            table.insert(items, {
+                effect = effect,
+                fingerprint = fp or FingerprintFromRecord(record),
+                record = record,
+                count = count,
+            })
+        end
+    end
+    if #items <= 1 then
+        return 0 -- 0 或 1 条本来就没有顺序问题
+    end
+
+    -- 2) 排序：先比权重，同权重比 effect_id。effect_id 唯一 → 全序，
+    --    避免 table.sort 不稳定导致同档内每次结果不同
+    table.sort(items, function(a, b)
+        local ra, rb = rank_of(a.effect), rank_of(b.effect)
+        if ra ~= rb then
+            return ra < rb
+        end
+        return tostring(a.effect) < tostring(b.effect)
+    end)
+
+    -- 3) 清空容器与后台数据。busy 期间 itemget/itemlose 回调被屏蔽，
+    --    否则移除展示石会被 OnItemLose 当成"玩家取走"而标记补货
+    self.busy = true
+    for slot = 1, self.numslots do
+        local display = self.container:GetItemInSlot(slot)
+        if display ~= nil then
+            -- wholestack=true 确保整块取出（RemoveItem 默认只取 1 个）；
+            -- RemoveItem 只把物品移出容器（不销毁实体），还需要自己 Remove 掉
+            self.container:RemoveItem(display, true)
+            display:Remove()
+        end
+        self.entries[slot] = nil
+        self.fingerprints[slot] = nil
+        self.pending_restock[slot] = nil
+    end
+    self.busy = false
+
+    -- 4) 按新顺序落位：count 先全额记进后台，再由 RestockAll 扣 1 补出展示石
+    for i, item in ipairs(items) do
+        if i > self.numslots then break end
+        self.entries[i] = { data = item.record, count = item.count }
+        self.fingerprints[i] = item.fingerprint
+    end
+
+    self:RestockAll()
+    self:UpdateCounts()
+    return #items
+end
+
 ---- 收录明细（查看描述用）
 ---- name_of(effect_id) -> 展示名，由 prefab 层注入（词条中文名在 HH 注册表里）
 function MoonAlbum:GetSummary(name_of)

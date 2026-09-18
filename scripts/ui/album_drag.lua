@@ -13,9 +13,13 @@
 local _G = GLOBAL
 local ALBUM_PREFAB = "lmoon_stone_album"
 -- 面板背景拉伸尺寸：两页 9×9 的槽位中心横跨 1370、纵跨 640，四周各留 90 余量
+-- 高度比宽度多留一截，是为了给底部的「整理」按钮腾出位置
 -- （须与 prefabs/lmoon_stone_album.lua 的 ALBUM_COLS/ROWS/PAGES/PAGE_GAP 保持一致）
 local ALBUM_PANEL_W = 1550
-local ALBUM_PANEL_H = 820
+local ALBUM_PANEL_H = 880
+
+-- 「整理」按钮纵向位置（窗口本地坐标）。网格底边在 -352、面板底边在 -440，取中放
+local SORT_BTN_Y = -396
 
 -- 当前打开的收集册窗口（客户端收到服务端 RPC 数量后据此刷新角标）
 local active_albums = setmetatable({}, { __mode = "k" })
@@ -166,6 +170,29 @@ local function InstallAlbumDrag(ContainerWidget)
         active_albums[s] = true
         local drag = s.__album_drag
 
+        -- 底部「整理」按钮：排序必须在服务端做（容器数据与存档都在服务端），
+        -- 这里只发 RPC；服务端排完后会推数量同步，角标自动刷新。
+        local TextButton = _G.require("widgets/textbutton")
+        local sort_btn = s:AddChild(TextButton())
+        sort_btn:SetFont(_G.BODYTEXTFONT)
+        sort_btn:SetTextSize(26)
+        sort_btn:SetTextColour({ 1, 1, 1, 0.9 })
+        sort_btn:SetTextFocusColour({ 1, 0.85, 0.4, 1 })
+        sort_btn:SetText("整 理")
+        -- Button:SetText 不会改水平对齐，文字默认从按钮原点往右排，
+        -- 直接 SetPosition(0, y) 会整体右偏半个字宽。按游戏自身写法
+        -- （containerwidget.lua 的关闭按钮）把内层文字改成居中即可。
+        sort_btn.text:SetHAlign(_G.ANCHOR_MIDDLE)
+        sort_btn:SetTooltip("按附魔石背景色重排册内附魔石")
+        sort_btn:SetPosition(0, SORT_BTN_Y, 0)
+        sort_btn:MoveToFront()
+        sort_btn:SetOnClick(function()
+            if s.isopen then
+                _G.SendModRPCToServer(_G.MOD_RPC["LittleMoon"]["AlbumSort"])
+            end
+        end)
+        drag.sort_btn = sort_btn
+
         drag.handlers.mousebtn = _G.TheInput:AddMouseButtonHandler(function(button, down)
             if button ~= _G.MOUSEBUTTON_LEFT or not s.isopen then
                 return
@@ -235,6 +262,10 @@ local function InstallAlbumDrag(ContainerWidget)
         end
         if drag.hint ~= nil then
             drag.hint:Kill()
+        end
+        -- 按钮是窗口的子 widget，容器关闭不会自动销毁；不清掉的话下次开册会重复叠加
+        if drag.sort_btn ~= nil then
+            drag.sort_btn:Kill()
         end
         active_albums[s] = nil
         s.__album_drag = nil
