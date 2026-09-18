@@ -7,7 +7,8 @@
 -- 两种口径都做尝试，任一命中即可拖动。
 -- 放大：ContainerWidget 构造固定 SetScale(0.6)，对收集册改为 0.8。
 -- 角标：服务端把各槽总数写入 net_counts（"槽位:总数;..."），客户端监听
--- dirty 事件在每个槽位右上角画数量。
+-- dirty 事件后直接调用原版 ItemTile:SetQuantity 画数字——与树枝等
+-- 可堆叠物品的计数显示完全同款（字体/位置/999+ 截断都是原版行为）。
 
 local _G = GLOBAL
 local ALBUM_PREFAB = "lmoon_stone_album"
@@ -23,7 +24,6 @@ local ZONE_Y_MIN = 360
 local ZONE_Y_MAX = 430
 
 local ALBUM_SCALE = 0.8 -- 默认 0.6，放大格子
-local BADGE_SIZE = 26
 
 ---- 取容器实体：ContainerWidget 的 container 一般是 entity（playerhud:Open(container,doer) 传 self.inst），
 ---- 兼容万一传的是组件的情形（组件取 .inst）
@@ -84,7 +84,7 @@ local function MouseDelta(s)
     return d
 end
 
----- 堆叠数量角标 ----
+---- 堆叠数量角标：复用原版 ItemTile 的堆叠数字 ----
 local function UpdateBadges(s)
     local drag = s.__album_drag
     if drag == nil then
@@ -101,61 +101,18 @@ local function UpdateBadges(s)
     for slot_str, n_str in string.gmatch(raw, "(%d+):(%d+)") do
         counts[tonumber(slot_str)] = tonumber(n_str)
     end
-    for i, badge in pairs(drag.badges) do
-        local n = counts[i]
-        if n ~= nil and n > 1 then
-            badge:SetString(tostring(n))
-            badge:Show()
-            badge:MoveToFront()
-        else
-            badge:Hide()
-        end
-    end
-end
-
-local function MakeBadges(s)
-    local drag = s.__album_drag
-    if drag == nil or drag.badges ~= nil then
-        return
-    end
-    local Text = _G.require("widgets/text")
-    drag.badges = {}
-    -- 角标直接挂到 ContainerWidget 顶层（在所有 slot 子树之上）；
-    -- 物品格 tile 是 slot 的子节点，无论何时 AddChild 都盖不住顶层角标
+    -- 展示石本身不是 stackable，原版 tile 不会自带数字；
+    -- 直接调用 ItemTile:SetQuantity 画上去（NUMBERFONT 42 / >999 截断均为原版行为）
     for i, slot in pairs(s.inv) do
-        local badge = Text(_G.BUTTONFONT, BADGE_SIZE)
-        badge:SetString("")
-        badge:SetColour(1, 0.92, 0.55, 1)
-        local p = slot:GetPosition()
-        badge:SetPosition(p.x + 22, p.y - 24, 0)
-        s:AddChild(badge)
-        drag.badges[i] = badge
-    end
-    drag.album_entity = AlbumEntity(s)
-    if drag.album_entity ~= nil and drag.album_entity.net_counts ~= nil then
-        drag.counts_fn = function() UpdateBadges(s) end
-        s.inst:ListenForEvent("lmoon_album_counts_dirty", drag.counts_fn, drag.album_entity)
-    end
-    print("[lmoon_stone_album] badges ready, net_counts=",
-        tostring(drag.album_entity ~= nil and drag.album_entity.net_counts ~= nil
-            and drag.album_entity.net_counts:value()))
-    UpdateBadges(s)
-end
-
-local function KillBadges(s)
-    local drag = s.__album_drag
-    if drag == nil then
-        return
-    end
-    if drag.counts_fn ~= nil and drag.album_entity ~= nil then
-        s.inst:RemoveEventCallback("lmoon_album_counts_dirty", drag.counts_fn, drag.album_entity)
-        drag.counts_fn = nil
-    end
-    if drag.badges ~= nil then
-        for _, badge in pairs(drag.badges) do
-            badge:Kill()
+        local tile = slot ~= nil and slot.tile or nil
+        if tile ~= nil then
+            local n = counts[i]
+            if n ~= nil and n > 1 then
+                tile:SetQuantity(n)
+            elseif tile.quantity ~= nil then
+                tile.quantity:SetString("") -- 数量 ≤1 不显示数字（原版单块可堆叠物品同款）
+            end
         end
-        drag.badges = nil
     end
 end
 
@@ -199,7 +156,6 @@ local function InstallAlbumDrag(ContainerWidget)
         s.__album_drag = {
             hint = hint,
             dragging = false,
-            badges = nil,
             counts_fn = nil,
             album_entity = nil,
             handlers = {},
@@ -234,7 +190,24 @@ local function InstallAlbumDrag(ContainerWidget)
             s:SetPosition(pos)
         end)
 
-        MakeBadges(s)
+        -- 数量角标：监听服务端数量同步 + 槽位变化（补货/取出会重建 tile，
+        -- 数字随旧 tile 消失，需要重画）。事件顺序：OldOpen 里 ContainerWidget
+        -- 已先注册 itemget/itemlose/refresh，新 tile 先建好，我们再补数字。
+        drag.album_entity = AlbumEntity(s)
+        if drag.album_entity ~= nil then
+            drag.counts_fn = function()
+                -- netvar 与 RPC 双通道，后到的为准：清掉旧 RPC 缓存，改读 netvar
+                drag.counts_str = nil
+                UpdateBadges(s)
+            end
+            if drag.album_entity.net_counts ~= nil then
+                s.inst:ListenForEvent("lmoon_album_counts_dirty", drag.counts_fn, drag.album_entity)
+            end
+            s.inst:ListenForEvent("itemget", drag.counts_fn, drag.album_entity)
+            s.inst:ListenForEvent("itemlose", drag.counts_fn, drag.album_entity)
+            s.inst:ListenForEvent("refresh", drag.counts_fn, drag.album_entity)
+        end
+        UpdateBadges(s)
     end
 
     ContainerWidget.DisableAlbumDrag = function(s)
@@ -244,7 +217,12 @@ local function InstallAlbumDrag(ContainerWidget)
         end
         RemoveHandler(drag.handlers.mousebtn)
         RemoveHandler(drag.handlers.move)
-        KillBadges(s)
+        if drag.counts_fn ~= nil and drag.album_entity ~= nil then
+            s.inst:RemoveEventCallback("lmoon_album_counts_dirty", drag.counts_fn, drag.album_entity)
+            s.inst:RemoveEventCallback("itemget", drag.counts_fn, drag.album_entity)
+            s.inst:RemoveEventCallback("itemlose", drag.counts_fn, drag.album_entity)
+            s.inst:RemoveEventCallback("refresh", drag.counts_fn, drag.album_entity)
+        end
         if drag.hint ~= nil then
             drag.hint:Kill()
         end
