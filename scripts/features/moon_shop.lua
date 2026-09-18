@@ -248,7 +248,7 @@ local function InitMoonShop()
     end
 
     -- 附魔收集册兑换: 莎草纸2 + 月岩5 + 紫宝石1（原蓝图配方迁移至商店，不再注册制作栏蓝图）
-    if CFG.ENABLE_MORE_ENCHANTS and hh_enabled then
+    if CFG.ENABLE_MOON_SHOP_ALBUM and CFG.ENABLE_MORE_ENCHANTS and hh_enabled then
         local album_recipe_id = "MoonShop_lmoon_stone_album"
         if not (AllRecipes and AllRecipes[album_recipe_id]) then
             AddRecipe2(

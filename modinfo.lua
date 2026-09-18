@@ -629,6 +629,16 @@ configuration_options = {
         },
         default = true,
     },
+    {
+        name = "ENABLE_MOON_SHOP_ALBUM",
+        label = "附魔收集册兑换",
+        hover = "小月亮商店中显示用 莎草纸2 + 月岩5 + 紫宝石1 兑换 1 本附魔收集册（需 HH 附魔模组 + 更多附魔）\n同词条附魔石放入自动归拢堆叠，取出词条不丢",
+        options = {
+            { description = "开启", data = true },
+            { description = "关闭", data = false },
+        },
+        default = true,
+    },
 
     AddTitle("开局礼包"),
     {
