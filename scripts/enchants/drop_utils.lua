@@ -71,12 +71,12 @@ AddPrefabPostInitAny(function(inst)
     end)
 end)
 
--- 钢羊(spat)击杀掉落：10%概率掉落 Legend_LAOSHI 附魔石（需开启魔女之旅 Mod）
+-- 钢羊(spat)击杀掉落：3%概率掉落 Legend_LAOSHI 附魔石（需开启魔女之旅 Mod）
 AddPrefabPostInit("spat", function(inst)
     if not GLOBAL.TheWorld.ismastersim then return end
     if not GLOBAL.Moon_IsModEnabled("workshop-2578692071") then return end
     inst:ListenForEvent("death", function(inst, data)
-        if math.random() > 0.02 then return end
+        if math.random() > 0.03 then return end
         local stone = GLOBAL.HHSpawnStoneById("Legend_LAOSHI")
         if stone then
             local pt = inst:GetPosition()
