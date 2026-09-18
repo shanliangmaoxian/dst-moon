@@ -12,14 +12,17 @@
 
 local _G = GLOBAL
 local ALBUM_PREFAB = "lmoon_stone_album"
-local ALBUM_PANEL_SIZE = 760 -- 面板背景拉伸尺寸（约 9×9 网格 + 边距）
+-- 面板背景拉伸尺寸：两页 9×9 的槽位中心横跨 1370、纵跨 640，四周各留 90 余量
+-- （须与 prefabs/lmoon_stone_album.lua 的 ALBUM_COLS/ROWS/PAGES/PAGE_GAP 保持一致）
+local ALBUM_PANEL_W = 1550
+local ALBUM_PANEL_H = 820
 
 -- 当前打开的收集册窗口（客户端收到服务端 RPC 数量后据此刷新角标）
 local active_albums = setmetatable({}, { __mode = "k" })
 
 -- 拖动热区（窗口本地坐标，与缩放无关：命中测试会除以累计缩放）
--- 9×9 网格占满 640×640（半幅 320 + 格半高），热区提到网格正上方
-local ZONE_HALF_W = 360
+-- 两页网格横向中心跨 1370（半幅 685）、纵向仍是 640（半幅 320），热区提到网格正上方
+local ZONE_HALF_W = 725
 local ZONE_Y_MIN = 360
 local ZONE_Y_MAX = 430
 
@@ -141,7 +144,7 @@ local function InstallAlbumDrag(ContainerWidget)
 
         -- 面板边框背景：ContainerWidget 已按 params.bgatlas/bgimage 设好 s.bgimage，这里拉伸到网格大小
         if s.bgimage ~= nil and s.bgimage.texture ~= nil then
-            s.bgimage:ScaleToSize(ALBUM_PANEL_SIZE, ALBUM_PANEL_SIZE)
+            s.bgimage:ScaleToSize(ALBUM_PANEL_W, ALBUM_PANEL_H)
             s.bgimage:MoveToBack()
         end
 
@@ -182,11 +185,18 @@ local function InstallAlbumDrag(ContainerWidget)
                 return
             end
             local pos = s:GetPosition() + MouseDelta(s)
-            -- 限位：窗口原点不出屏幕（本地坐标，除以父链缩放）
+            -- 限位：让窗口整体留在屏幕内。窗口屏幕尺寸 = 面板尺寸 × 自身缩放 × 父链缩放，
+            -- 据此算出中心点可偏移的余量（本地坐标 = 屏幕位移 / 父链缩放）。
+            -- 窗口比屏幕还大时余量取 0（锁死居中），避免被拖出可视区后找不回来。
             local ps = (s.parent ~= nil and s.parent:GetScale().x) or 1
+            local ss = s:GetScale().x
+            if ps <= 0 then ps = 1 end
+            if ss == nil or ss <= 0 then ss = ALBUM_SCALE end
             local w, h = _G.TheSim:GetScreenSize()
-            pos.x = _G.math.max(-w / ps * 0.45, _G.math.min(w / ps * 0.45, pos.x))
-            pos.y = _G.math.max(-h / ps * 0.45, _G.math.min(h / ps * 0.45, pos.y))
+            local limit_x = _G.math.max(0, (w * 0.5 - ALBUM_PANEL_W * ss * ps * 0.5) / ps)
+            local limit_y = _G.math.max(0, (h * 0.5 - ALBUM_PANEL_H * ss * ps * 0.5) / ps)
+            pos.x = _G.math.max(-limit_x, _G.math.min(limit_x, pos.x))
+            pos.y = _G.math.max(-limit_y, _G.math.min(limit_y, pos.y))
             s:SetPosition(pos)
         end)
 

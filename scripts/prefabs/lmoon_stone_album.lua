@@ -61,11 +61,17 @@ local function AlbumItemTest(container, item, slot)
 end
 
 -- 注入容器 UI 参数（服务端 + 客户端各执行一次本文件，注册表按 prefab 名共享）
--- 9×9 = 81 格（一种词条一槽，够放下全部附魔词条）
--- 注意：album_drag.lua 的 ZONE_HALF_W / ZONE_Y_MIN 等拖动热区常量按 9×9 网格取值，须与此处保持一致
+-- 布局：左右两页各 9×9，共 162 格（一种词条一槽，够放下全部附魔词条）
+-- 槽位编号：左页 = 1~81，与原单页 9×9 的生成顺序完全一致（旧存档槽位语义不变，只是整体左移）；
+--          右页 = 82~162，左页填满后接着用。
+-- 注意：album_drag.lua 的 ZONE_HALF_W / ALBUM_PANEL_W 等常量按此布局取值，须与此处保持一致
 local ALBUM_COLS = 9
 local ALBUM_ROWS = 9
+local ALBUM_PAGES = 2
 local ALBUM_SLOT_STEP = 80
+local ALBUM_PAGE_GAP = 90 -- 两页之间的装订缝（纯留白，不占槽位）
+-- 下限约束：槽位贴图 inv_slot 本身宽 64，缝宽 ≤64 时两页最边上的槽会视觉重叠。
+-- 取 90 让跨页缝隙（26）略大于页内间隙（16）：看得出分页，又不至于把两页拉开。
 containers.params.lmoon_stone_album = {
     widget = {
         slotpos = {},
@@ -86,13 +92,23 @@ containers.params.lmoon_stone_album = {
     openlimit = 1,
     itemtestfn = AlbumItemTest,
 }
-local half_w = (ALBUM_COLS - 1) * 0.5 * ALBUM_SLOT_STEP
+local page_w = (ALBUM_COLS - 1) * ALBUM_SLOT_STEP
+local total_w = page_w * ALBUM_PAGES + ALBUM_PAGE_GAP * (ALBUM_PAGES - 1)
 local half_h = (ALBUM_ROWS - 1) * 0.5 * ALBUM_SLOT_STEP
+-- 两页各自的起始 x：整幅左右对称居中（左页整体偏左、右页整体偏右，装订缝落在正中）
+local page_x0 = {
+    -total_w * 0.5,
+    -total_w * 0.5 + page_w + ALBUM_PAGE_GAP,
+}
 -- 原版约定（宝箱/冰箱等）：y 从高到低生成，1 号槽在左上角，从上往下填充
-for y = ALBUM_ROWS - 1, 0, -1 do
-    for x = 0, ALBUM_COLS - 1 do
-        table.insert(containers.params.lmoon_stone_album.widget.slotpos,
-            Vector3(ALBUM_SLOT_STEP * x - half_w, ALBUM_SLOT_STEP * y - half_h, 0))
+-- 逐页生成：左页 1~81，右页 82~162
+for page = 1, ALBUM_PAGES do
+    local x0 = page_x0[page]
+    for y = ALBUM_ROWS - 1, 0, -1 do
+        for x = 0, ALBUM_COLS - 1 do
+            table.insert(containers.params.lmoon_stone_album.widget.slotpos,
+                Vector3(x0 + ALBUM_SLOT_STEP * x, ALBUM_SLOT_STEP * y - half_h, 0))
+        end
     end
 end
 containers.MAXITEMSLOTS = math.max(containers.MAXITEMSLOTS or 0,
