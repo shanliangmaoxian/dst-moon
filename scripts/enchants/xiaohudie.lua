@@ -55,8 +55,9 @@ AddPrefabPostInit("world", function(inst)
                 -- 脱手（免疫缴械/卸甲）：分两层
                 -- 1) stronggrip tag：挡原版湿滑(slipperyfeet)滑落
                 --    （记录 own 标志，避免穿脱时误删 yufenfen 等同款来源的 tag）
-                -- 2) 拦截 inventory:DropItem：把"已装备物品丢到地上"的路径
-                --    全部吞掉（mod 怪击落卸甲/缴械等）
+                -- 2) 拦截 inventory:DropItem：把"已装备物品被强制丢到地上"的路径
+                --    吞掉（mod 怪击落卸甲/缴械等）；玩家主动动作（投掷海饵、
+                --    投掷类武器攻击等）放行，避免原版动作失效/崩溃
                 -- ==============================================
                 if not owner:HasTag("stronggrip") then
                     owner:AddTag("stronggrip")
@@ -72,7 +73,22 @@ AddPrefabPostInit("world", function(inst)
                             and item.components.equippable
                             and item.components.equippable:IsEquipped()
                         then
-                            return true -- 已装备物品被击落/丢弃时直接吞掉（免疫卸甲）
+                            -- 玩家"主动"对该装备执行的动作必须放行，否则动作失效甚至崩溃：
+                            -- 1) OCEAN_TOSS 投掷已装备海饵 / DEPLOY 发射等 —— 此时
+                            --    doer.bufferedaction.invobject == 该物品（见崩溃栈：
+                            --    投掷 fishhomingbait 时被吞，原版拿返回值当实体用）
+                            -- 2) 用已装备的投掷类武器攻击（combat:DoAttack 会 DropItem 后 Throw）
+                            -- 其余情况（怪物缴械/击落/诅咒/溺水等强制卸下）才吞掉。
+                            -- 注意：吞掉时必须返回 nil 而非 true —— 原版 DropItem 本就有
+                            -- 返回 nil 的路径，所有调用方（OCEAN_TOSS/combat/DEPLOY 等）
+                            -- 都做了判空；返回 true 会被当作实体索引 .components 直接崩溃。
+                            local ba = owner.bufferedaction
+                            local deliberate = (ba ~= nil and ba.invobject == item)
+                                or item.components.projectile ~= nil
+                                or item.components.complexprojectile ~= nil
+                            if not deliberate then
+                                return nil -- 已装备物品被击落/缴械时直接吞掉（免疫卸甲）
+                            end
                         end
                         return owner._xiaohudie_old_dropitem(self, item, ...)
                     end
