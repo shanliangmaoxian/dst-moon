@@ -649,6 +649,19 @@ configuration_options = {
         default = "",
     },
 
+    AddTitle("强度配置"),
+    {
+        name = "HANYUE_TEST_LEVEL",
+        label = "寒月试炼难度",
+        hover = "简单：重复 Boss 小幅增加进度，合成材料不需要附魔石；一般：重复 Boss 完全不增加进度",
+        options = {
+            { description = "简单", data = 0 },
+            { description = "一般", data = 1 },
+        },
+        default = 1,
+    },
+
+
     AddTitle("性能设置"),
     {
         name = "TRANSFORM_LIMIT",
