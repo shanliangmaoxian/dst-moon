@@ -58,7 +58,7 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_WYWQ           = "T1",  -- 无欲无求：禅定减伤80%
     Legend_XIAOGUAI       = "T1",  -- 七步之内：攻速+100%（小樱限定）
     Legend_YUEBAN         = "T1",  -- 月半：血量5%乘区
-    Legend_YZDX           = "T1",  -- 一枝独秀：solo翻倍
+    Legend_YZDX           = "T1",  -- 一枝独秀：1%最大生命真伤+吸血+暴击，solo翻倍
     Legend_YZQ            = "T1",  -- 云中雀：移速+300%几率+翱翔
 
     -------------------------------------------------------------

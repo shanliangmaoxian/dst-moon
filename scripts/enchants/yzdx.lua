@@ -1,5 +1,5 @@
 -- 小月亮 附魔：一枝独秀
--- 有托托莉就1%的噩梦伤害，没有就1%血量伤害(类似撕裂)、8%吸血、50%增强
+-- 1%最大生命真伤(穿透护甲与防御层减伤)、8%吸血、50%暴击效果、10%暴击率
 -- 周围15码内没有队友时，以上效果翻倍
 
 local _G = GLOBAL
@@ -13,7 +13,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_YZDX", {
         name = "一枝独秀",
         client_text = "一枝\n独秀",
-        desc = "有托托莉就1%的噩梦伤害，没有就1%血量伤害+8%吸血+50%增强\n周围无队友时效果翻倍",
+        desc = "1%最大生命真伤+8%吸血+50%暴击效果+10%暴击率\n周围无队友时效果翻倍",
         check_desc = "一枝独秀，傲视群雄！\n周围15码内无队友时效果翻倍",
         can_add = false,
         only_one = true,
@@ -28,32 +28,23 @@ AddPrefabPostInit("world", function(inst)
                 owner._yzdx_inited = true
                 owner._yzdx_effect_applied = false
 
-                -- 缓存：一次遍历 AllPlayers，同时检测托托莉和周围队友
+                -- 缓存：一次遍历 AllPlayers，检测周围是否有队友
                 owner._yzdx_refreshCache = function()
                     local x, y, z = owner.Transform:GetWorldPosition()
-                    local has_tutu = false
                     local is_solo = true
                     for _, v in ipairs(GLOBAL.AllPlayers) do
                         if v:IsValid() then
-                            -- 检测托托莉（角色 prefab 为 "totooria"，兼容常见写法）
-                            if not has_tutu then
-                                local prefab = (v.prefab or ""):lower()
-                                if prefab:find("totooria") or prefab:find("tutuoli") or prefab:find("totori") or prefab:find("torori") then
-                                    has_tutu = true
-                                end
-                            end
                             -- 检测附近队友
                             if is_solo and v ~= owner and v:GetDistanceSqToPoint(x, y, z) < 225 then
                                 is_solo = false
                             end
                         end
                     end
-                    owner._yzdx_cache_tutu = has_tutu
                     owner._yzdx_cache_solo = is_solo
                     owner._yzdx_cache_mult = is_solo and 2 or 1
                 end
 
-                -- 应用静态buff (吸血 + 增强)
+                -- 应用静态buff (吸血 + 暴击效果 + 暴击率)
                 owner._yzdx_applyBuffs = function()
                     if owner._yzdx_effect_applied then return end
                     local hh = owner.components.hh_player
@@ -62,6 +53,8 @@ AddPrefabPostInit("world", function(inst)
                     local mult = owner._yzdx_cache_mult or 1
                     hh:AddEffectValueByKey("bloodSuck", 8 * mult)
                     hh:AddEffectValueByKey("criticalHitEffect", 50 * mult)
+                    -- 自带暴击率：否则 HH 的暴击效果(需 criticalHitRate > 0)永远不触发
+                    hh:AddEffectValueByKey("criticalHitRate", 10 * mult)
                     owner._yzdx_effect_applied = true
                     owner._yzdx_applied_mult = mult
                 end
@@ -73,6 +66,7 @@ AddPrefabPostInit("world", function(inst)
                     local mult = owner._yzdx_applied_mult or 1
                     hh:ReduceEffectValueByKey("bloodSuck", 8 * mult)
                     hh:ReduceEffectValueByKey("criticalHitEffect", 50 * mult)
+                    hh:ReduceEffectValueByKey("criticalHitRate", 10 * mult)
                     owner._yzdx_effect_applied = false
                     owner._yzdx_applied_mult = nil
                 end
@@ -83,12 +77,7 @@ AddPrefabPostInit("world", function(inst)
                     owner._yzdx_applyBuffs()
                 end
 
-                -- 确保 ttl_wanly_damage 组件存在（托托莉噩梦伤害组件，由托托莉mod提供）
-                if not owner.components.ttl_wanly_damage then
-                    _G.pcall(function() owner:AddComponent("ttl_wanly_damage") end)
-                end
-
-                -- 攻击时触发撕裂/噩梦伤害（使用缓存，不遍历 AllPlayers）
+                -- 攻击时触发 1%最大生命真伤（使用缓存，不遍历 AllPlayers）
                 owner._yzdx_attack_handler = function(attacker, data)
                     if not _G.Moon_HasEffect(owner, "yzdx") then return end
                     local target = data and data.target
@@ -97,20 +86,15 @@ AddPrefabPostInit("world", function(inst)
                     if not health or health:IsDead() then return end
 
                     local mult = owner._yzdx_cache_mult or 1
-                    local tutu = owner._yzdx_cache_tutu
                     local max_hp = health.maxhealth or 100
                     local dmg = max_hp * 0.01 * mult
 
-                    if tutu then
-                        -- 有托托莉：1%最大生命噩梦伤害（托托莉 ttl_wanly_damage 伤害模式）
-                        local ttl = owner.components.ttl_wanly_damage
-                        if ttl then
-                            ttl:ApplyTTL_wanly_damage(target, dmg)
-                        else
-                            health:DoDelta(-dmg, false, nil)
-                        end
+                    -- 1%最大生命真伤：优先走 HH 官方真伤（SetVal 直写，穿透护甲与怪物强化
+                    -- 防御层减伤，且带击杀归属/掉落兼容），无 DoHHDelta 时回退普通扣血。
+                    -- 写法与 fay.lua / epsilon.lua 的真伤分支一致。
+                    if health.DoHHDelta then
+                        health:DoHHDelta(-dmg, owner, nil)
                     else
-                        -- 没有托托莉：1%血量伤害（撕裂，走普通扣血）
                         health:DoDelta(-dmg, false, nil)
                     end
                 end
@@ -122,7 +106,7 @@ AddPrefabPostInit("world", function(inst)
                     local hh = owner.components.hh_player
                     if not hh then return end
 
-                    -- 刷新缓存（托托莉/独狼）并同步吸血/增强buff
+                    -- 刷新缓存（独狼判定）并同步吸血/增强buff
                     _G.pcall(owner._yzdx_refreshCache, owner)
                     owner._yzdx_refreshBuffs()
                 end
