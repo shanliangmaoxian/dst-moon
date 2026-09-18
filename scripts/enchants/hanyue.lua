@@ -1,7 +1,7 @@
 -- 小月亮 附魔：寒月公主
--- 攻击冻结目标(永冻)：每秒扣2%最大生命(有托托莉则2%噩梦真伤)
+-- 攻击冻结目标(永冻)：每次攻击扣2%最大生命(有托托莉则2%噩梦真伤)
 -- 每次攻击附带666真伤 | 暴击率+66% 爆伤+666% | 雪花特效
--- 托托莉检测参考一枝独秀(yzdx)
+-- 偷取：每次攻击1%概率偷取目标战利品
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
@@ -14,10 +14,14 @@ local NOVEL_SCORE = 3
 local equip_util = require("moon_utils/asserts")
 
 local FROST_DURATION = 8    -- 永冻持续时间(秒)，攻击会刷新
-local FROST_PERCENT = 0.02  -- 每秒扣血百分比(2%最大生命)
+local FROST_PERCENT = 0.02  -- 每次攻击扣血百分比(2%最大生命)
 local TRUE_DMG = 666        -- 每次攻击附带的真伤
 local CRIT_RATE = 66        -- 暴击率(暴击率+66%)
 local CRIT_EFFECT = 666     -- 爆伤(额外+666%)
+
+-- 偷取参数
+local GREED_STEAL_CHANCE = 0.01     -- 每次攻击 1% 概率偷取目标战利品
+local GREED_STEAL_COOLDOWN = 1      -- 偷取冷却 1 秒
 
 local MEMORY_KEY = "LMOON_STONE_HANYUE_TEST_MEMORY"
 local PROGRESS_KEY = "LMOON_STONE_HANYUE_TEST_PROGRESS"
@@ -151,13 +155,30 @@ local function format_display(score, memory_list)
     return table.concat(LMOON.filter({title_str, separator_header_str, progress_str, memories_str, separator_footer_str}, truly), "\n")
 end
 
+-- ---- 偷取辅助 ----
+-- 偷取战利品：按目标掉落表生成一批并直接吐到地上
+-- 注意：GenerateLoot 不消耗原掉落表，怪物死亡时照常掉落
+local function StealLootFromTarget(target)
+    local dropper = target ~= nil and target.components and target.components.lootdropper
+    if dropper == nil then return false end
+    local loot = dropper:GenerateLoot()
+    if loot == nil or #loot == 0 then return false end
+    local pt = target:GetPosition()
+    for _, item_prefab in ipairs(loot) do
+        if item_prefab ~= nil then
+            dropper:SpawnLootPrefab(item_prefab, pt)
+        end
+    end
+    return true
+end
+
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
     GLOBAL.AddSpecialEquipEffect("Legend_HANYUE", {
         name = "寒月公主",
         client_text = "寒月\n公主",
-        desc = "攻击冻结目标(永冻)每秒扣2%最大生命\n有托托莉则2%噩梦伤害 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤",
+        desc = "攻击冻结目标(永冻)每次攻击扣2%最大生命\n有托托莉则2%噩梦伤害 | 暴击+66% 爆伤+666%\n每次攻击附带666真伤\n偷取：1%概率偷取目标战利品",
         check_desc = "寒月照，万物霜！",
         obtain_desc = "由【寒月试炼】获得",
         obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
@@ -177,6 +198,8 @@ AddPrefabPostInit("world", function(inst)
                 owner._hanyue_inited = true
                 owner._hanyue_marks = {}
                 owner._hanyue_has_totori = false
+                -- 偷取：偷取战利品冷却时间戳
+                owner._hanyue_greed_last_steal = 0
 
                 -- 确保 ttl_wanly_damage 组件存在（托托莉噩梦伤害组件，由托托莉mod提供）
                 if not owner.components.ttl_wanly_damage then
@@ -223,7 +246,7 @@ AddPrefabPostInit("world", function(inst)
                     end
                 end
 
-                -- 攻击触发：666真伤 + 永冻标记 + 雪花特效
+                -- 攻击触发：666真伤 + 2%最大生命伤害 + 永冻标记 + 偷取
                 owner._hanyue_attack_handler = function(attacker, data)
                     if not _G.Moon_HasEffect(owner, "hanyue") then return end
                     local target = data and data.target
@@ -232,7 +255,7 @@ AddPrefabPostInit("world", function(inst)
                     local health = target.components.health
                     if not health or health:IsDead() then return end
 
-                    -- 托托莉检测(参考一枝独秀)：有托托莉则每秒2%伤害变为噩梦真伤
+                    -- 托托莉检测：有托托莉则2%伤害变为噩梦真伤
                     local has_totori = false
                     for _, v in ipairs(_G.AllPlayers) do
                         if v:IsValid() then
@@ -252,13 +275,37 @@ AddPrefabPostInit("world", function(inst)
                         health:DoDelta(-TRUE_DMG, false, "hanyue_true")
                     end
 
+                    -- 每次攻击附带2%最大生命伤害(有托托莉则走噩梦真伤通道)
+                    -- 666 已击杀则跳过，避免对尸体重复扣血/重复推送事件
+                    if not health:IsDead() then
+                        local frost_dmg = (health.maxhealth or 100) * FROST_PERCENT
+                        if owner._hanyue_has_totori then
+                            local ttl = owner.components.ttl_wanly_damage
+                            if ttl then
+                                ttl:ApplyTTL_wanly_damage(target, frost_dmg)
+                            else
+                                health:DoDelta(-frost_dmg, false, "hanyue_frost")
+                            end
+                        else
+                            health:DoDelta(-frost_dmg, false, "hanyue_frost")
+                        end
+                    end
+
                     -- 永冻标记(攻击刷新持续时长)
                     owner._hanyue_marks[target] = _G.GetTime() + FROST_DURATION
                     freezeTarget(target)
+
+                    -- 偷取：1% 概率偷取目标战利品（冷却 1 秒）
+                    local steal_now = _G.GetTime()
+                    if steal_now - owner._hanyue_greed_last_steal >= GREED_STEAL_COOLDOWN
+                        and math.random() < GREED_STEAL_CHANCE then
+                        owner._hanyue_greed_last_steal = steal_now
+                        StealLootFromTarget(target)
+                    end
                 end
                 owner:ListenForEvent("onattackother", owner._hanyue_attack_handler)
 
-                -- 每秒一跳：保持冻结 + 2%最大生命伤害 + 雪花特效
+                -- 每秒一跳：仅维持永冻（2%最大生命伤害已改为每次攻击附带）
                 owner._hanyue_tick_task = owner:DoPeriodicTask(1, function()
                     if not _G.Moon_HasEffect(owner, "hanyue") then return end
                     local now = _G.GetTime()
@@ -270,19 +317,6 @@ AddPrefabPostInit("world", function(inst)
                             remove_list[#remove_list + 1] = target
                         else
                             freezeTarget(target)
-                            local max_hp = health.maxhealth or 100
-                            local dmg = max_hp * FROST_PERCENT
-                            if owner._hanyue_has_totori then
-                                -- 托托莉噩梦伤害（ttl_wanly_damage 伤害模式）
-                                local ttl = owner.components.ttl_wanly_damage
-                                if ttl then
-                                    ttl:ApplyTTL_wanly_damage(target, dmg)
-                                else
-                                    health:DoDelta(-dmg, false, "hanyue_frost")
-                                end
-                            else
-                                health:DoDelta(-dmg, false, "hanyue_frost")
-                            end
                         end
                     end
                     for _, t in ipairs(remove_list) do
@@ -308,6 +342,8 @@ AddPrefabPostInit("world", function(inst)
                     owner._hanyue_tick_task:Cancel()
                     owner._hanyue_tick_task = nil
                 end
+
+                owner._hanyue_greed_last_steal = nil
 
                 owner._hanyue_marks = nil
                 owner._hanyue_has_totori = nil
