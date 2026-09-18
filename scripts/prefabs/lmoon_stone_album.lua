@@ -63,7 +63,7 @@ end
 -- 注入容器 UI 参数（服务端 + 客户端各执行一次本文件，注册表按 prefab 名共享）
 -- 9×9 = 81 格（一种词条一槽，够放下全部附魔词条）
 -- 注意：album_drag.lua 的 ZONE_HALF_W / ZONE_Y_MIN 等拖动热区常量按 9×9 网格取值，须与此处保持一致
-local ALBUM_COLS = 13
+local ALBUM_COLS = 9
 local ALBUM_ROWS = 9
 local ALBUM_SLOT_STEP = 80
 containers.params.lmoon_stone_album = {
