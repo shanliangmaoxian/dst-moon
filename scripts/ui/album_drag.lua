@@ -253,11 +253,13 @@ local function InstallAlbumDrag(ContainerWidget)
     end
 end
 
--- 服务端脚本包里没有 widgets/containerwidget.lua，AddClassPostConstruct 会 require 失败；
--- pcall 包住：服务端静默跳过（无 UI 无需拖动），客户端正常安装
+-- 注意：传给 AddClassPostConstruct 的是 require 模块路径，不能带 ".lua" 后缀！
+-- 带 .lua 会被加载器当成子目录（containerwidget/lua.lua），导致任何环境（含客户端）都
+-- require 失败、PostConstruct 永远装不上。正确写法："widgets/containerwidget"。
+-- pcall 保留作保险：专用服等异常环境静默跳过，客户端正常安装。
 -- 注意：AddClassPostConstruct 是 mod 环境函数（不在 _G），必须经 mod 环境调用
 local ok, err = pcall(function()
-    AddClassPostConstruct("widgets/containerwidget.lua", InstallAlbumDrag)
+    AddClassPostConstruct("widgets/containerwidget", InstallAlbumDrag)
 end)
 if not ok then
     print("[lmoon_stone_album] album_drag not installed (no client UI on this context):", err)
