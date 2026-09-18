@@ -79,7 +79,7 @@ AddPrefabPostInit("world", function(inst)
         check_desc = "有注意到恋恋了嘛～",
         can_add = false,
         only_one = true,
-        is_special = false,
+        is_special = true, -- 专属获取：从 HH 掉落池(普通/优质/稀有)中排除，打宝藏怪也不掉
         client_color = { 0.8, 0, 0.8, 1 },
         check_equip_can_add = function(inst)
             return true, "满足条件"

@@ -184,7 +184,7 @@ AddPrefabPostInit("world", function(inst)
         obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         can_add = false,
         only_one = true,
-        is_special = false,
+        is_special = true, -- 专属获取：从 HH 掉落池(普通/优质/稀有)中排除，打宝藏怪也不掉
         client_color = { 0.8, 0, 0.8, 1 },
         check_equip_can_add = function(equip)
             if not equip_util.is_equipslot(equip, "HANDS") then
@@ -376,7 +376,7 @@ AddPrefabPostInit("world", function(inst)
         obtains = {}, -- 空表表示无法随机掉落、附魔卷轴以及合成出来
         can_add = false,
         only_one = true,
-        is_special = false,
+        is_special = true, -- 专属获取：从 HH 掉落池(普通/优质/稀有)中排除，打宝藏怪也不掉
         client_color = {0.8, 0, 0.8, 1},
         check_equip_can_add = function(equip)
             if not equip_util.is_equipslot(equip, "HANDS") then
