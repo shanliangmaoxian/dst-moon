@@ -78,7 +78,11 @@ containers.params.lmoon_stone_album = {
     },
     -- 非侧边容器：挂在屏幕中央锚点（containerroot），issidewidget=true 会挂到右侧锚点
     issidewidget = false,
-    type = "pack",
+    -- type 必须与背包区分开：原版 Container:Open 会按「同 prefab 或同 type」自动关闭
+    -- 已打开的同类型容器（components/container.lua）。背包 type 是 "pack"，
+    -- 若这里也写 "pack"，开收集册会强制关掉背包、开背包也会关掉收集册，两者无法并存。
+    -- 取独立 type 后互不干扰；该值未命中 playerhud 的特殊分支，仍落在 containerroot，位置不变。
+    type = "lmoon_album",
     openlimit = 1,
     itemtestfn = AlbumItemTest,
 }
