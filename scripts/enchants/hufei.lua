@@ -2,21 +2,27 @@
 -- 5只光翼蝴蝶护体：受击消耗1只减免60%伤害
 -- 每6秒恢复1只；击杀回复25生命+15精神并恢复2只
 -- 每只蝴蝶+4%伤害(满5只+20%)，移速+20%
--- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死时几率回满生命
--- 概率触发（无次数上限），SUIT_SAVE_CHANCE 可调 0~1
+-- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死时立即回满血，共两次
+--   第 1 次「蝶的献祭」、第 2 次「飞的守护」
+--   两次尽数用尽(双飞伴生蝶都死亡)后触发「蝶之泯灭的哀伤」，套装效果失效 90 秒
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
 
--- 套装「双飞伴生蝶」：濒死满血触发几率
-local SUIT_SAVE_CHANCE = 0.3
+-- 套装「双飞伴生蝶」参数
+local SUIT_CHARGES = 2            -- 濒死回满血的次数（两次献祭）
+local SUIT_LOST_DURATION = 90     -- 两次用尽后套装失效时长(秒)
+-- 按消耗顺序命名：第 1 次 / 第 2 次
+local SUIT_SAVE_NAMES = { "蝶的献祭", "飞的守护" }
+local SUIT_LOST_NAME = "蝶之泯灭的哀伤"
 
--- 套装判定：小蝴蝶 + 小阿飞 同时装备
+-- 套装判定：小蝴蝶 + 小阿飞 同时装备，且不处于「蝶之泯灭的哀伤」失效期
 local function isSuitActive(owner)
     return _G.Moon_HasEffect(owner, "hufei")
         and _G.Moon_HasEffect(owner, "xiaohudie")
+        and not owner._shuangfei_lost
 end
 
 -- 同步护体蝴蝶的可见实体（数量与 _hufei_butterflies 一致，紫色光翼环绕）
@@ -68,7 +74,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HUFEI", {
         name = "蝴蝶的小阿飞",
         client_text = "蝶\n飞",
-        desc = "5只光翼蝴蝶护体,受击耗1只减免60%\n每6秒回1只;击杀回25血+15精神+2只\n每只蝴蝶+4%伤害,移速+20%\n套装「双飞伴生蝶」:与小蝴蝶齐穿\n濒死时30%几率立即回满生命",
+        desc = "5只光翼蝴蝶护体,受击耗1只减免60%\n每6秒回1只;击杀回25血+15精神+2只\n每只蝴蝶+4%伤害,移速+20%\n套装「双飞伴生蝶」:与小蝴蝶齐穿\n濒死立即回满血2次(蝶的献祭/飞的守护)\n两次用尽触发蝶之泯灭的哀伤,套装失效90秒",
         check_desc = "蝶翼护体，攻守兼备！",
         can_add = false,
         only_one = true,
@@ -84,31 +90,73 @@ AddPrefabPostInit("world", function(inst)
                 owner._hufei_butterflies = 5      -- 初始5只
 
                 -- ==============================================
-                -- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死几率满血
+                -- 套装「双飞伴生蝶」：与小蝴蝶齐穿，濒死立即回满血（共两次）
                 -- 原理：health 组件在生命触底(≤0)瞬间先推 "minhealth" 事件、
                 -- 之后才在同一函数内推 "death"；在 minhealth 回调里把血拉满，
                 -- SetVal 后续的死亡判定读到的 currenthealth 已 > 0，死亡被跳过。
+                -- 两次献祭（第1次「蝶的献祭」→ 第2次「飞的守护」）尽数用尽，
+                -- 即双飞伴生蝶都死亡，触发「蝶之泯灭的哀伤」，套装效果失效一段时间。
                 -- ==============================================
+                -- 充能只在本次会话首次装备时初始化：同一次游戏内脱下再穿不刷新次数，
+                -- 避免靠反复穿脱白嫖献祭。不做存档持久化——重载后从头开始，
+                -- 这样既宽松又不会出现"哀伤计时丢失导致永久失效"的死锁。
+                if owner._shuangfei_charges == nil then
+                    owner._shuangfei_charges = SUIT_CHARGES
+                end
+
                 owner._shuangfei_death_handler = function()
                     owner._shuangfei_dead = true  -- 真死过就不再触发（防尸体重复触发）
                 end
                 owner:ListenForEvent("death", owner._shuangfei_death_handler)
+
+                -- 复活回来必须清掉"真死过"标记，否则复活后套装永久哑火
+                owner._shuangfei_respawn_handler = function()
+                    owner._shuangfei_dead = nil
+                end
+                owner:ListenForEvent("respawnfromghost", owner._shuangfei_respawn_handler)
+
                 owner._shuangfei_minhealth_handler = function(inst, data)
                     if owner._shuangfei_dead then return end
                     if not isSuitActive(owner) then return end
-                    if _G.math.random() >= SUIT_SAVE_CHANCE then
-                        if owner.components.talker then
-                            owner.components.talker:Say("双飞伴生蝶…这次没能护住你")
-                        end
-                        return
-                    end
+                    local charges = owner._shuangfei_charges or 0
+                    if charges <= 0 then return end
+
+                    -- 立即回满血，无概率判定
                     local health = owner.components.health
                     if health then
                         health:DoDelta(health.maxhealth, true, "shuangfei_save")
                     end
+
+                    owner._shuangfei_charges = charges - 1
+                    -- SUIT_SAVE_NAMES 按消耗顺序排列：第1次蝶的献祭、第2次飞的守护
+                    local save_name = SUIT_SAVE_NAMES[SUIT_CHARGES - charges + 1]
+
                     if owner.components.talker then
-                        owner.components.talker:Say("双飞伴生蝶！化蝶护命！")
+                        owner.components.talker:Say("双飞伴生蝶！" .. (save_name or "") .. "！")
                     end
+
+                    if owner._shuangfei_charges > 0 then return end
+
+                    -- 两次献祭尽数用尽：双飞伴生蝶都死亡 → 蝶之泯灭的哀伤
+                    owner._shuangfei_lost = true
+                    owner:DoTaskInTime(1.5, function()
+                        if owner:IsValid() and owner.components.talker then
+                            owner.components.talker:Say(SUIT_LOST_NAME .. "…双飞伴生蝶已尽数凋零")
+                        end
+                    end)
+
+                    if owner._shuangfei_recover_task then
+                        owner._shuangfei_recover_task:Cancel()
+                    end
+                    owner._shuangfei_recover_task = owner:DoTaskInTime(SUIT_LOST_DURATION, function()
+                        owner._shuangfei_recover_task = nil
+                        if not owner:IsValid() then return end
+                        owner._shuangfei_lost = nil
+                        owner._shuangfei_charges = SUIT_CHARGES
+                        if isSuitActive(owner) and owner.components.talker then
+                            owner.components.talker:Say("哀伤散尽，双飞伴生蝶再度振翅")
+                        end
+                    end)
                 end
                 owner:ListenForEvent("minhealth", owner._shuangfei_minhealth_handler)
 
@@ -234,7 +282,14 @@ AddPrefabPostInit("world", function(inst)
                     owner:RemoveEventCallback("death", owner._shuangfei_death_handler)
                     owner._shuangfei_death_handler = nil
                 end
+                if owner._shuangfei_respawn_handler then
+                    owner:RemoveEventCallback("respawnfromghost", owner._shuangfei_respawn_handler)
+                    owner._shuangfei_respawn_handler = nil
+                end
                 owner._shuangfei_dead = nil
+                -- 注意：_shuangfei_charges / _shuangfei_lost / _shuangfei_recover_task
+                -- 故意不在这里清理——清了的话脱下再穿上就能把两次献祭刷满；
+                -- 哀伤的恢复计时是时间制，与当前是否穿着套装无关，让它自然走完
                 owner._hufei_hooked = nil
             end
         end,
