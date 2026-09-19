@@ -598,19 +598,19 @@ _G.MOON_MOB_ENCHANTS = {
     -----------------------------------------------------------------
     -- 吸血 — 攻击按伤害百分比回血（移植自 atkBlood）
     -----------------------------------------------------------------
-    MOB_LIFESTEAL = {
-        name = "吸血", desc = "攻击回复伤害值10%~15%的生命", weight = 2, boss_only = false,
-        on_attack = function(inst, target, tier, mult, state, data)
-            if not IsValidTarget(inst, target) then return end
-            if not inst.components.health then return end
-            local damage = data and data.damage or 0
-            if not damage or damage <= 0 then
-                damage = inst.components.combat and inst.components.combat.defaultdamage or 10
-            end
-            local ratio = tier == "boss" and 0.15 or 0.1
-            inst.components.health:DoDelta(damage * ratio * mult, false, "mob_lifesteal")
-        end,
-    },
+    -- MOB_LIFESTEAL = {
+    --     name = "吸血", desc = "攻击回复伤害值10%~15%的生命", weight = 2, boss_only = false,
+    --     on_attack = function(inst, target, tier, mult, state, data)
+    --         if not IsValidTarget(inst, target) then return end
+    --         if not inst.components.health then return end
+    --         local damage = data and data.damage or 0
+    --         if not damage or damage <= 0 then
+    --             damage = inst.components.combat and inst.components.combat.defaultdamage or 10
+    --         end
+    --         local ratio = tier == "boss" and 0.15 or 0.1
+    --         inst.components.health:DoDelta(damage * ratio * mult, false, "mob_lifesteal")
+    --     end,
+    -- },
 
     -----------------------------------------------------------------
     -- 格挡 — 受击概率完全免伤（移植自 noHitDamage/replaceDamageChance）

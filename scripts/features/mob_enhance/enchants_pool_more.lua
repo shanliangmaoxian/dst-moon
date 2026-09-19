@@ -515,34 +515,34 @@ _G.MOON_MOB_ENCHANTS_MORE = {
     -----------------------------------------------------------------
     -- 隐匿 — 受击隐身并回血（丢失目标）
     -----------------------------------------------------------------
-    MOB_CLOAK = {
-        name = "隐匿", desc = "受击25%概率隐身5秒并回复生命", weight = 1, boss_only = false,
-        on_attacked = function(inst, attacker, damage, tier, mult, state)
-            if math.random() > 0.25 then return end
-            if state._cloak then return end
-            state._cloak = true
-            inst:AddTag("invisible")
-            inst:AddTag("notarget")
-            if inst.entity then
-                inst.entity:Hide()
-            end
-            if inst.components.combat then
-                inst.components.combat:SetTarget(nil)
-            end
-            if inst.components.health then
-                inst.components.health:DoDelta(inst.components.health.maxhealth * 0.05 * mult, false, "mob_cloak")
-            end
-            inst:DoTaskInTime(5, function()
-                state._cloak = false
-                if not inst:IsValid() then return end
-                inst:RemoveTag("invisible")
-                inst:RemoveTag("notarget")
-                if inst.entity then
-                    inst.entity:Show()
-                end
-            end)
-        end,
-    },
+    -- MOB_CLOAK = {
+    --     name = "隐匿", desc = "受击25%概率隐身5秒并回复生命", weight = 1, boss_only = false,
+    --     on_attacked = function(inst, attacker, damage, tier, mult, state)
+    --         if math.random() > 0.25 then return end
+    --         if state._cloak then return end
+    --         state._cloak = true
+    --         inst:AddTag("invisible")
+    --         inst:AddTag("notarget")
+    --         if inst.entity then
+    --             inst.entity:Hide()
+    --         end
+    --         if inst.components.combat then
+    --             inst.components.combat:SetTarget(nil)
+    --         end
+    --         if inst.components.health then
+    --             inst.components.health:DoDelta(inst.components.health.maxhealth * 0.05 * mult, false, "mob_cloak")
+    --         end
+    --         inst:DoTaskInTime(5, function()
+    --             state._cloak = false
+    --             if not inst:IsValid() then return end
+    --             inst:RemoveTag("invisible")
+    --             inst:RemoveTag("notarget")
+    --             if inst.entity then
+    --                 inst.entity:Show()
+    --             end
+    --         end)
+    --     end,
+    -- },
 
     -----------------------------------------------------------------
     -- 怒击 — 受击进入狂暴（短时爆发）
@@ -779,21 +779,21 @@ _G.MOON_MOB_ENCHANTS_MORE = {
     -----------------------------------------------------------------
     -- 冲击 — 击退目标（位移控制）
     -----------------------------------------------------------------
-    MOB_KNOCK = {
-        name = "冲击", desc = "攻击30%概率使目标短暂减速", weight = 2, boss_only = false,
-        on_attack = function(inst, target, tier, mult, state)
-            if not IsValidTarget(inst, target) then return end
-            if math.random() > 0.3 then return end
-            if target.components.locomotor then
-                target.components.locomotor:SetExternalSpeedMultiplier(target, "mob_knock", 0.5)
-                target:DoTaskInTime(1, function()
-                    if target:IsValid() and target.components.locomotor then
-                        target.components.locomotor:RemoveExternalSpeedMultiplier(target, "mob_knock")
-                    end
-                end)
-            end
-        end,
-    },
+    -- MOB_KNOCK = {
+    --     name = "冲击", desc = "攻击30%概率使目标短暂减速", weight = 2, boss_only = false,
+    --     on_attack = function(inst, target, tier, mult, state)
+    --         if not IsValidTarget(inst, target) then return end
+    --         if math.random() > 0.3 then return end
+    --         if target.components.locomotor then
+    --             target.components.locomotor:SetExternalSpeedMultiplier(target, "mob_knock", 0.5)
+    --             target:DoTaskInTime(1, function()
+    --                 if target:IsValid() and target.components.locomotor then
+    --                     target.components.locomotor:RemoveExternalSpeedMultiplier(target, "mob_knock")
+    --                 end
+    --             end)
+    --         end
+    --     end,
+    -- },
 
     -----------------------------------------------------------------
     -- 钩爪 — 把目标拉向自己
