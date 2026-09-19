@@ -40,6 +40,7 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_XYCZ             = "T0",  -- 幸运橙汁
     Legend_CHANGPI          = "T0",  -- 长臂
     Legend_YUFENFEN         = "T0",  -- 雨纷纷：满雨露+免疫冷热+免即死（仅伞）
+    Legend_QIUNIANG         = "T0",  -- 建家能手穹酱：免仇恨+脱战99%免伤+建造减半+快速动作（小穹限定）
 
     -------------------------------------------------------------
     -- T1 强力
