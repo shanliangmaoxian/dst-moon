@@ -16,7 +16,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_EPSILON", {
         name = "伊普西隆",
         client_text = "伊普\n西隆",
-        desc = "极限累积\n每次攻击叠加1层印记(上限5层)\n每层:本次攻击额外造成目标当前生命值0.5%%的真实伤害\n5层满:下一次攻击造成目标最大生命值3%%的真实伤害,随后清空印记",
+        desc = "极限累积\n每次攻击叠加1层印记(上限5层)\n每层:本次攻击额外造成目标当前生命值0.5%的真实伤害\n5层满:下一次攻击造成目标最大生命值5%的真实伤害,随后清空印记",
         check_desc = "极限累积，层数越高伤害越高！",
         can_add = false,
         only_one = true,
@@ -44,8 +44,8 @@ AddPrefabPostInit("world", function(inst)
 
                     local stacks = owner._epsilon_stacks or 0
                     if stacks >= 5 then
-                        -- 满层爆发：目标最大生命值 3% 真实伤害，随后清空印记
-                        local burst_dmg = max_hp * 0.03
+                        -- 满层爆发：目标最大生命值 5% 真实伤害，随后清空印记
+                        local burst_dmg = max_hp * 0.05
                         if health.DoHHDelta then
                             health:DoHHDelta(-burst_dmg, owner, nil)
                         else
