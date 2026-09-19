@@ -60,13 +60,13 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_YUEBAN         = "T1",  -- 月半：血量5%乘区
     Legend_YZDX           = "T1",  -- 一枝独秀：1%最大生命真伤+吸血+暴击，solo翻倍
     Legend_YZQ            = "T1",  -- 云中雀：移速+300%几率+翱翔
+    Legend_FAY            = "T1",  -- 妖精庇护：8%已损失真伤
 
     -------------------------------------------------------------
     -- T2 均衡（基准线）
     -------------------------------------------------------------
     Legend_DENGQIULING  = "T2",  -- 等秋零：万金油
     Legend_EPSILON      = "T2",  -- 伊普西隆：极限累积
-    Legend_FAY          = "T2",  -- 妖精庇护：8%已损失真伤
     Legend_GANFAN       = "T2",  -- 干饭人：进食叠层
     Legend_GENZHE       = "T2",  -- 我就跟着混：队友光环
     Legend_JDD          = "T2",  -- 急冻冻：20%冰冻+冰爆AoE（已重新启用，modmain 在加载）
