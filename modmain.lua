@@ -135,6 +135,8 @@ modimport("scripts/enchants/hanyue")      -- 寒月公主
 modimport("scripts/enchants/yufenfen")    -- 雨纷纷
 modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
 modimport("scripts/enchants/qiuniang")    -- 建家能手穹酱（小穹联动）
+modimport("scripts/enchants/jieshen")     -- 孑身处处静（与余灯照夜明成套装）
+modimport("scripts/enchants/yudeng")      -- 余灯照夜明（与孑身处处静成套装）
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
 modimport("scripts/enchants/tier_display") -- 档位显示注入（名称前缀 + 飘字分色，需在所有附魔注册之后加载）
 
