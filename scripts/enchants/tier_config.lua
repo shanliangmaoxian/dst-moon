@@ -47,6 +47,7 @@ TUNING.MOON_ENCHANT_TIERS = {
     -------------------------------------------------------------
     Legend_AIYO           = "T1",  -- 哎哟：受伤回60%+反弹100%
     Moon_CCS_BLESSING     = "T1",  -- 小野的加护：Boss封印/秒杀（小樱限定）
+    Legend_infinite_star  = "T1",  -- 无限星力：无限魔力（小樱炼成/小樱专用）
     Legend_DGR            = "T1",  -- 打工人：工作×2+双倍产出
     Legend_DENGDENGQIULING = "T1", -- 等等秋零：暴击3倍+50真伤
     Legend_FUZHONG        = "T1",  -- 负重前行：攻击×2（特化）
