@@ -4,6 +4,7 @@ GLOBAL.LMOON = {}
 
 function GLOBAL.LMOON.map(table, fn)
     local results = {}
+    table = table or {} -- 防御：旧存档可能存入 nil
     for i, v in ipairs(table) do
         GLOBAL.table.insert(results, fn(v, i, table))
     end
@@ -12,7 +13,8 @@ end
 
 function GLOBAL.LMOON.filter(table, fn)
     local results = {}
-    for i = 1, #table, 1 do 
+    table = table or {} -- 防御：旧存档可能存入 nil
+    for i = 1, #table, 1 do
         local v = table[i]
         local result = fn(v, i, table)
         if result then

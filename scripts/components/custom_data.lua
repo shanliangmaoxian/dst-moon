@@ -37,8 +37,10 @@ function CustomData:OnLoad(data)
     for key, instance_data in pairs(self.data) do
         -- 元升级（等到现存旧组件数据都消失时，可以安全删除
         -- 在元升级前，实例数据中不存在 version 和 data 键，所以这是安全的
+        -- 注意：旧格式数据就是 instance_data 本身（此时 instance_data.data 必为 nil），
+        -- 必须把 instance_data 整体作为 data 存入，否则旧数据会被洗成 nil
         if instance_data and not instance_data.version and not instance_data.data then
-            self.data[key] = {data = instance_data.data, version = 0}
+            self.data[key] = {data = instance_data, version = 0}
         end
     end
 
@@ -69,6 +71,11 @@ function CustomData:OnLoad(data)
             local latest_data = instance_data.data
             local current_version = instance_data.version + 1 -- 从下个版本开始执行
             local current_upgrader = key_upgrades[current_version]
+            -- 防御：已被旧版元升级 bug 洗成 nil 的数据（data=nil, version=0），
+            -- 升级时按空表处理，避免升级程序内 ipairs(nil) 崩溃
+            if latest_data == nil and current_upgrader then
+                latest_data = {}
+            end
             -- 从数据的下一个版本开始依次执行
             while current_upgrader do
                 latest_data = current_upgrader(latest_data)
@@ -90,7 +97,9 @@ function CustomData:GetDebugString()
     table.sort(values, function(a, b) return a.key < b.key end)
 
     for i, v in ipairs(values) do
-        values[i] = string.format("%s : %g", v.key, v.value)
+        -- v.value 为 {data=..., version=...}，data 可能是表，用 tostring 防 %g 崩溃
+        values[i] = string.format("%s : %s (v%s)",
+            tostring(v.key), tostring(v.value.data), tostring(v.value.version))
     end
 
     return
