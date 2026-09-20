@@ -85,6 +85,27 @@ AddPrefabPostInit("spat", function(inst)
     end)
 end)
 
+-- 击杀蝴蝶(butterfly)掉落：0.1%概率掉落 小蝴蝶/小阿飞 附魔石之一
+AddPrefabPostInit("butterfly", function(inst)
+    if not GLOBAL.TheWorld.ismastersim then return end
+    if not GLOBAL.MOON_CFG or not GLOBAL.MOON_CFG.ENABLE_MORE_ENCHANTS then return end
+    if not GLOBAL.Moon_IsHHEnabled or not GLOBAL.Moon_IsHHEnabled() then return end
+    inst:ListenForEvent("death", function(inst, data)
+        if math.random() > 0.001 then return end
+        local enchant_id = math.random(2) == 1 and "Legend_XIAOHUDIE" or "Legend_HUFEI"
+        local stone = GLOBAL.HHSpawnStoneById(enchant_id)
+        if stone then
+            local pt = inst:GetPosition()
+            local killer = data and data.afflicter
+            if killer and killer:IsValid() and killer.components.inventory then
+                killer.components.inventory:GiveItem(stone, nil, pt)
+            else
+                stone.Transform:SetPosition(pt:Get())
+            end
+        end
+    end)
+end)
+
 -- =========================================================
 -- 使用时长掉落：装备佩戴指定附魔满 N 秒 → 掉落一枚该附魔石
 -- mode="continuous"：按物品连续佩戴计时，仅在"被佩戴"时计时；
