@@ -306,9 +306,12 @@ local prefabs = {}
 --     整体透明（alpha 0）避免"印章+悬浮图标"两个外观叠加。
 local ALBUM_ICON_ATLAS = "images/inventoryimages/lmoon_stone_album.xml"
 local ALBUM_ICON_TEX = "lmoon_stone_album.tex"
--- 尺寸/悬浮高度参考：血条 100x10、世界偏移 y=3；物品位取 80px、悬空 1 格
+-- 尺寸/贴地参考：血条 bar 100x10、world_offset y=3（那是刻意悬在怪头顶）。
+-- 原版物品落地没有偏移：物理落定后实体原点=贴地点、动画底部画在原点
+-- （inventoryitem.lua DoDropPhysics）。Image 以"原点+offset"为中心渲染，
+-- 因此 offset 取图标半高让底边贴地，而不是悬空。
 local GROUND_ICON_SIZE = 80
-local GROUND_ICON_OFFSET_Y = 1.5
+local GROUND_ICON_OFFSET_Y = 0.4
 
 local function CreateGroundIcon(inst)
     local img = CreateEntity("lmoon_album_groundicon")
