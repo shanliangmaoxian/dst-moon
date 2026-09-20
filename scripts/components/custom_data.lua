@@ -8,7 +8,7 @@ local CustomData = Class(function(self, inst)
     self.donotsave = {}
 end)
 
-function CustomData:Get(key) return self.data[key].data end
+function CustomData:Get(key) return self.data[key] and self.data[key].data end
 function CustomData:Set(key, value)
     -- 自动版本号的设计遵循“没有改动就不需要升级”的原则
     local version = multivalue_upgrades[key] and #multivalue_upgrades[key] or 1
