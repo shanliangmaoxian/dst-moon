@@ -104,7 +104,9 @@ AddSimPostInit(function()
     if not _G.Moon_IsHHEnabled() then return end
     if not _G.Moon_IsModEnabled("workshop-3043439883") then return end
     if _G.AllRecipes[RECIPE_NAME] ~= nil then return end
-    _G.AddRecipe2(
+    -- 注意：AddRecipe2 是 mod 环境注入的 modutil 函数，不在 GLOBAL 里，
+    -- 必须裸写（GLOBAL.AddRecipe2 会触发 strict.lua "not declared"）
+    AddRecipe2(
         RECIPE_NAME,
         {
             _G.Ingredient(
