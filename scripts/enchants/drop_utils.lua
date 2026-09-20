@@ -84,3 +84,87 @@ AddPrefabPostInit("spat", function(inst)
         end
     end)
 end)
+
+-- =========================================================
+-- 使用时长掉落：装备佩戴指定附魔满 N 秒 → 掉落一枚该附魔石
+-- 计时按物品（同一件装备）独立累计，且仅在"被佩戴"时计时；
+-- 摘下装备（摘掉附魔）即取消计时并清零，重新佩戴重新计数；
+-- 计满后清零重新累计，持续佩戴可反复获取
+-- =========================================================
+local USE_TIME_DROPS = {
+    -- 附魔id = { time = 需要的使用秒数, name = 飘字用的附魔名 }
+    ["Legend_YUFENFEN"] = { time = 2400, name = "雨纷纷" }, -- 同一把伞连续使用满 2400 秒（游戏内40分钟）
+}
+
+-- 检查物品是否带有指定附魔（HH equip_buff_list: {name=附魔id, value=数值}）
+local function ItemHasEnchant(item, enchant_id)
+    local eq = item and item.components and item.components.hh_equip
+    local list = eq and eq.equip_buff_list
+    if type(list) ~= "table" then return false end
+    for _, v in ipairs(list) do
+        if type(v) == "table" and v.name == enchant_id then
+            return true
+        end
+    end
+    return false
+end
+
+local function GiveEnchantStone(owner, enchant_id)
+    local ok, stone = _G.pcall(_G.HHSpawnStoneById, enchant_id)
+    if not (ok and stone) then return end
+    if owner.components.inventory then
+        owner.components.inventory:GiveItem(stone, nil, owner:GetPosition())
+    else
+        stone.Transform:SetPosition(owner:GetPosition():Get())
+    end
+    if owner.components.talker then
+        owner.components.talker:Say("这把伞陪你走过了一场又一场雨…获得了新的【"
+            .. (USE_TIME_DROPS[enchant_id] and USE_TIME_DROPS[enchant_id].name or enchant_id) .. "】附魔石")
+    end
+end
+
+AddPlayerPostInit(function(player)
+    if not _G.TheWorld.ismastersim then return end
+
+    -- 佩戴：物品带有计掉附魔时，按物品启动计时
+    player:ListenForEvent("equip", function(owner, data)
+        local item = data and data.item
+        if not item or not item:IsValid() then return end
+        local enchant_id
+        for id in pairs(USE_TIME_DROPS) do
+            if ItemHasEnchant(item, id) then
+                enchant_id = id
+                break
+            end
+        end
+        if not enchant_id then return end
+        if item._moon_usedrop_task then
+            item._moon_usedrop_task:Cancel()
+        end
+        item._moon_usedrop_id = enchant_id
+        item._moon_usedrop_time = item._moon_usedrop_time or 0
+        item._moon_usedrop_task = item:DoPeriodicTask(1, function(it)
+            -- 玩家失效（离线等）时本轮不计
+            if not (owner and owner:IsValid()) then return end
+            it._moon_usedrop_time = (it._moon_usedrop_time or 0) + 1
+            local need = USE_TIME_DROPS[it._moon_usedrop_id]
+                and USE_TIME_DROPS[it._moon_usedrop_id].time or 2400
+            if it._moon_usedrop_time >= need then
+                it._moon_usedrop_time = 0 -- 计满清零，继续佩戴可再次累计
+                GiveEnchantStone(owner, it._moon_usedrop_id)
+            end
+        end, 1)
+    end)
+
+    -- 摘下：取消计时并清零（摘掉就重新计数）
+    player:ListenForEvent("unequip", function(_, data)
+        local item = data and data.item
+        if not item then return end
+        if item._moon_usedrop_task then
+            item._moon_usedrop_task:Cancel()
+            item._moon_usedrop_task = nil
+        end
+        item._moon_usedrop_time = nil
+        item._moon_usedrop_id = nil
+    end)
+end)
