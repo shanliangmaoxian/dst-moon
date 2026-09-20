@@ -1,5 +1,5 @@
 -- 小月亮 附魔：无欲无求
--- 2秒不做动作即入禅定：每秒回复5%三维，减伤80%，免疫仇恨
+-- 2秒不做动作即入禅定：每秒回复20%三维，减伤95%，免疫仇恨
 -- 移动或攻击后解除，需重新站立2秒触发
 
 local _G = GLOBAL
@@ -13,7 +13,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_WYWQ", {
         name = "无欲无求",
         client_text = "无欲\n无求",
-        desc = "2秒不做动作即入禅定\n每秒回5%三维 减伤80% 免疫仇恨",
+        desc = "2秒不做动作即入禅定\n每秒回20%三维 减伤95% 免疫仇恨",
         check_desc = "无欲则刚，无求则安～\n站立2秒不动自动触发",
         can_add = false,
         only_one = true,
@@ -51,7 +51,7 @@ AddPrefabPostInit("world", function(inst)
                         owner.components.combat:GiveUp()
                     end
 
-                    -- 每1秒回复8%三维
+                    -- 每1秒回复20%三维
                     if owner.components.health and owner.components.sanity and owner.components.hunger then
                         owner._wywq_regen_task = owner:DoPeriodicTask(1, function()
                             if not _G.Moon_HasEffect(owner, "wywq") then return end
@@ -66,10 +66,10 @@ AddPrefabPostInit("world", function(inst)
                             local max_san = owner.components.sanity.max or 200
                             local max_hunger = owner.components.hunger.max or 150
                             if owner.components.health:GetPercent() < 1 then
-                                owner.components.health:DoDelta(max_hp * 0.05, false, nil)
+                                owner.components.health:DoDelta(max_hp * 0.20, false, nil)
                             end
-                            owner.components.sanity:DoDelta(max_san * 0.05)
-                            owner.components.hunger:DoDelta(max_hunger * 0.05)
+                            owner.components.sanity:DoDelta(max_san * 0.20)
+                            owner.components.hunger:DoDelta(max_hunger * 0.20)
                         end)
                     end
 
