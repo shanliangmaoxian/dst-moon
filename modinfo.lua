@@ -403,6 +403,28 @@ configuration_options = {
         default = false,
     },
 
+    AddTitle("输出统计"),
+    {
+        name = "ENABLE_DAMAGE_STATS",
+        label = "开启输出统计",
+        hover = "统计所有玩家造成的伤害（普伤/真伤/击杀），在助手面板中显示排行榜",
+        options = {
+            { description = "开启", data = true },
+            { description = "关闭", data = false },
+        },
+        default = false,
+    },
+    {
+        name = "DAMAGE_STATS_RESET_ON_SWITCH",
+        label = "换人重置统计",
+        hover = "换人（切换角色）后是否将输出统计清零",
+        options = {
+            { description = "清零", data = true },
+            { description = "不清零", data = false },
+        },
+        default = false,
+    },
+
     AddTitle("快捷发言"),
     {
         name = "ENABLE_QUICK_CHAT",
@@ -632,7 +654,7 @@ configuration_options = {
     {
         name = "ENABLE_MOON_SHOP_ALBUM",
         label = "附魔收集册兑换",
-        hover = "小月亮商店中显示用 莎草纸2 + 月岩5 + 紫宝石1 兑换 1 本附魔收集册（需 HH 附魔模组 + 更多附魔）\n同词条附魔石放入自动归拢堆叠，取出词条不丢",
+        hover = "小月亮商店中显示用 莎草纸2 + 月岩5 + 紫宝石1 兑换 1 本附魔收集册\n同词条附魔石放入自动归拢堆叠，取出词条不丢",
         options = {
             { description = "开启", data = true },
             { description = "关闭", data = false },

@@ -85,7 +85,7 @@ local function CreateSectionTitle(parent, text, onClick)
 	return w, label
 end
 
-local LittleMoonPanel = Class(Widget, function(self, owner, max_summon, scale, enable_treasure, enable_ql_helper, enable_auto_pickup, enable_suicide, dig_treasure_mode, enable_quick_chat, enable_death_stats, enable_mod_browser)
+local LittleMoonPanel = Class(Widget, function(self, owner, max_summon, scale, enable_treasure, enable_ql_helper, enable_auto_pickup, enable_suicide, dig_treasure_mode, enable_quick_chat, enable_death_stats, enable_damage_stats, enable_mod_browser)
 	Widget._ctor(self, "LittleMoonPanel")
 
 	self.owner = owner
@@ -97,6 +97,7 @@ local LittleMoonPanel = Class(Widget, function(self, owner, max_summon, scale, e
 	self.dig_treasure_mode = dig_treasure_mode or 0
 	self.enable_quick_chat = enable_quick_chat ~= false
 	self.enable_death_stats = enable_death_stats ~= false
+	self.enable_damage_stats = enable_damage_stats ~= false
 	self.enable_mod_browser = enable_mod_browser ~= false
 
 	self.drag_move_handler = nil
@@ -483,17 +484,29 @@ local LittleMoonPanel = Class(Widget, function(self, owner, max_summon, scale, e
 	-------------------------------------------------------------------
 	-- 冒险记录
 	-------------------------------------------------------------------
-	if self.enable_death_stats then
+	if self.enable_death_stats or self.enable_damage_stats then
 		local title_w, title_label = CreateSectionTitle(self, "冒险记录", function() self:ToggleSection("death") end)
 		local container = self:AddChild(Widget("death_container"))
 
-		self.death_btn = container:AddChild(TEMPLATES.StandardButton(function()
-			if ThePlayer and ThePlayer.HUD and ThePlayer.HUD.death_stats_panel then
-				ThePlayer.HUD.death_stats_panel:Toggle()
-			end
-		end, "冒险记录", { 120, 36 }))
-		self.death_btn:SetPosition(0, 0, 0)
-		self.death_btn:SetTextSize(20)
+		if self.enable_death_stats then
+			self.death_btn = container:AddChild(TEMPLATES.StandardButton(function()
+				if ThePlayer and ThePlayer.HUD and ThePlayer.HUD.death_stats_panel then
+					ThePlayer.HUD.death_stats_panel:Toggle()
+				end
+			end, self.enable_damage_stats and "死亡统计" or "冒险记录", { 120, 36 }))
+			self.death_btn:SetPosition(self.enable_damage_stats and -65 or 0, 0, 0)
+			self.death_btn:SetTextSize(20)
+		end
+
+		if self.enable_damage_stats then
+			self.damage_btn = container:AddChild(TEMPLATES.StandardButton(function()
+				if ThePlayer and ThePlayer.HUD and ThePlayer.HUD.damage_stats_panel then
+					ThePlayer.HUD.damage_stats_panel:Toggle()
+				end
+			end, self.enable_death_stats and "伤害统计" or "输出统计", { 120, 36 }))
+			self.damage_btn:SetPosition(self.enable_death_stats and 65 or 0, 0, 0)
+			self.damage_btn:SetTextSize(20)
+		end
 
 		table.insert(self.sections, {
 			key = "death",

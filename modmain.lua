@@ -73,6 +73,7 @@ modimport("scripts/features/enchant_remover")
 -- modimport("scripts/features/skin_ownership")
 modimport("scripts/features/wardrobe_anywhere")
 modimport("scripts/features/death_stats")
+modimport("scripts/features/damage_stats")
 modimport("scripts/features/ban_items")
 modimport("scripts/features/moon_shop")
 modimport("scripts/features/moon_qunyou")     -- 小月亮商店：召唤群友（瞬发 prefab + 召唤逻辑）
@@ -153,7 +154,7 @@ modimport("scripts/ui/album_drag")        -- 附魔收集册窗口拖动（客�
 -- 4. UI 界面 (仅当任一相关功能启用时加载)
 -- ------------------------------------------------------------------
 local CFG = GLOBAL.MOON_CFG
-if CFG.ENABLE_TREASURE or CFG.ENABLE_QL_HELPER or CFG.ENABLE_AUTO_PICKUP or CFG.ENABLE_SUICIDE or CFG.ENABLE_MORE_ENCHANTS or CFG.ENABLE_DEATH_STATS or CFG.ENABLE_QUICK_CHAT or CFG.ENABLE_MOD_BROWSER then
+if CFG.ENABLE_TREASURE or CFG.ENABLE_QL_HELPER or CFG.ENABLE_AUTO_PICKUP or CFG.ENABLE_SUICIDE or CFG.ENABLE_MORE_ENCHANTS or CFG.ENABLE_DEATH_STATS or CFG.ENABLE_DAMAGE_STATS or CFG.ENABLE_QUICK_CHAT or CFG.ENABLE_MOD_BROWSER then
     modimport("scripts/ui/moon_button")
     modimport("scripts/ui/moon_panel")
 end
@@ -161,6 +162,11 @@ end
 -- 死亡统计独立面板 (需要自己的UI注入)
 if CFG.ENABLE_DEATH_STATS then
     modimport("scripts/ui/death_stats_inject")
+end
+
+-- 输出统计独立面板 (需要自己的UI注入)
+if CFG.ENABLE_DAMAGE_STATS then
+    modimport("scripts/ui/damage_stats_inject")
 end
 
 -- ------------------------------------------------------------------
