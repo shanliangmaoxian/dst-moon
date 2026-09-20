@@ -263,8 +263,8 @@ local function InitMoonShop()
                     product = "lmoon_stone_album",
                     nounlock = true,
                     numtogive = 1,
-                    atlas = GetInventoryItemAtlas("hh_effect_tally.tex") or "images/inventoryimages.xml",
-                    image = "hh_effect_tally.tex",
+                    atlas = "images/inventoryimages/lmoon_stone_album.xml",
+                    image = "lmoon_stone_album.tex",
                 },
                 filter_list
             )

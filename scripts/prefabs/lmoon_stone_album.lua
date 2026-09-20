@@ -286,9 +286,61 @@ local function AlbumColorRank(effect_id)
 end
 
 local assets = {
+    Asset("IMAGE", "images/inventoryimages/lmoon_stone_album.tex"),
+    Asset("ATLAS", "images/inventoryimages/lmoon_stone_album.xml"),
     Asset("ATLAS", "images/quagmire_recipebook.xml"),
 }
 local prefabs = {}
+
+-- ============================================================
+-- 地面贴图（Image 图标，血条同款方案）
+-- ============================================================
+-- 物品躺在地上时的外观：用引擎 Image 实体直接渲染物品栏图集贴图，
+-- 不再依赖 bank/build 动画。要点：
+--   · Image 组件不随网络复制，贴图由各端本地设置——创建逻辑放在 fn()
+--     的公共分支（服务端/客户端都会执行），非网络子实体 SetParent 挂本体
+--     （参照 components/healthbar.lua 的做法）。
+--   · Image 是「跟随实体、始终朝向屏幕」的覆盖层，躺在背包/容器里时
+--     若不关闭会飘在玩家/箱子头上——用 IsHeld 区分：躺地上才 Enable。
+--   · 本体 AnimState（HH 印章/书本兜底）保留为兜底外观，躺地上时
+--     整体透明（alpha 0）避免"印章+悬浮图标"两个外观叠加。
+local ALBUM_ICON_ATLAS = "images/inventoryimages/lmoon_stone_album.xml"
+local ALBUM_ICON_TEX = "lmoon_stone_album.tex"
+-- 尺寸/悬浮高度参考：血条 100x10、世界偏移 y=3；物品位取 80px、悬空 1 格
+local GROUND_ICON_SIZE = 80
+local GROUND_ICON_OFFSET_Y = 1.5
+
+local function CreateGroundIcon(inst)
+    local img = CreateEntity("lmoon_album_groundicon")
+    img.entity:AddTransform()
+    img.entity:AddImage()
+    img:AddTag("NOCLICK")
+    img.persists = false
+    img.Image:SetTexture(resolvefilepath(ALBUM_ICON_ATLAS), ALBUM_ICON_TEX)
+    img.Image:SetSize(GROUND_ICON_SIZE, GROUND_ICON_SIZE)
+    img.Image:SetWorldOffset(0, GROUND_ICON_OFFSET_Y, 0)
+    img.entity:SetParent(inst.entity)
+    img.Image:Enable(false)
+    return img
+end
+
+-- 躺地上（不在任何 holder 里）→ Enable 图标、隐藏本体动画；被持有 → 反之。
+-- 服务端查 inventoryitem 组件，客户端查 replica；事件只在服务端可靠触发，
+-- 客户端靠低频轮询兜底（每册 0.5s 一次，开销可忽略）。
+local function UpdateGroundVisual(inst)
+    local img = inst.MOON_GROUND_IMG
+    if img == nil or img.Image == nil then return end
+    local held
+    if TheWorld.ismastersim then
+        held = inst.components ~= nil and inst.components.inventoryitem ~= nil
+            and inst.components.inventoryitem:IsHeld()
+    else
+        held = inst.replica ~= nil and inst.replica.inventoryitem ~= nil
+            and inst.replica.inventoryitem:IsHeld()
+    end
+    img.Image:Enable(not held)
+    inst.AnimState:SetMultColour(1, 1, 1, held and 1 or 0)
+end
 
 local function fn()
     local inst = CreateEntity()
@@ -317,6 +369,13 @@ local function fn()
         inst.AnimState:PlayAnimation("idle", true)
     end
 
+    -- 地面贴图：公共分支创建（服务端/客户端各一份本地子实体）
+    inst.MOON_GROUND_IMG = CreateGroundIcon(inst)
+    inst:DoTaskInTime(0, UpdateGroundVisual)
+    inst:ListenForEvent("onputininventory", UpdateGroundVisual)
+    inst:ListenForEvent("ondropped", UpdateGroundVisual)
+    inst:DoPeriodicTask(0.25, UpdateGroundVisual)
+
     inst.entity:SetPristine()
     if not TheWorld.ismastersim then
         inst.OnEntityReplicated = function(inst)
@@ -331,15 +390,12 @@ local function fn()
     inst.components.inspectable.getspecialdescription = GetAlbumDescription
 
     inst:AddComponent("inventoryitem")
-    -- 注意：atlasname 会被客户端 replica 的 SetAtlas 用 resolvefilepath 强校验，
-    -- HH 不在时该图集不存在，直接设会炸掉启动/世界加载（assert）——必须随 use_hh_anim 分支
-    if use_hh_anim then
-        inst.components.inventoryitem.imagename = "hh_effect_tally"
-        inst.components.inventoryitem.atlasname = "images/hh_icon/hh_items.xml"
-    else
-        inst.components.inventoryitem.imagename = "book_gardening"
-        inst.components.inventoryitem.atlasname = "images/inventoryimages.xml"
-    end
+    -- 物品栏图标：用自己的 lmoon_stone_album 图集（xml 元素名 lmoon_stone_album.tex，
+    -- imagename 按 DST 约定不带 .tex，replica SetImage 会自动补）。
+    -- 该图集在本 mod 内、且已在上方 assets 注册（resolvefilepath 可解析），
+    -- 与 HH 是否启用无关，两种分支下图标都一致。
+    inst.components.inventoryitem.imagename = "lmoon_stone_album"
+    inst.components.inventoryitem.atlasname = "images/inventoryimages/lmoon_stone_album.xml"
 
     inst:AddComponent("container")
     inst.components.container:WidgetSetup("lmoon_stone_album")
