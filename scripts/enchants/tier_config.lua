@@ -66,6 +66,13 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_JIESHEN        = "T1",  -- 孑身处处静：无队友时免疫冷热+85%减伤+霸体+沙尘暴免疫
     Legend_YUDENG         = "T1",  -- 余灯照夜明：有队友时群体回复+攻防+驱散
     Legend_EPSILON        = "T1",  -- 伊普西隆：极限累积
+    Moon_YINGYU_XINGHUI   = "T1",  -- 樱语星辉：小樱专属制作，星之杖专用。
+    Legend_ZIDIE          = "T1",  -- 紫蝶：分身
+    Legend_FQCD_SANITY    = "T1",  -- 番茄炒蛋：san管理
+    Legend_XPING          = "T1",  -- 心平气和：套装防御位
+    Legend_YANGMAOKE      = "T1",  -- 养猫客：浣猫挡刀
+    Legend_YOUJISHUCAI    = "T1",  -- 有机蔬菜：料理翻倍
+    Legend_QIANYUE        = "T1",  -- 千月野：套装输出位
 
     -------------------------------------------------------------
     -- T2 均衡（基准线）
@@ -78,20 +85,14 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_LAOSHI       = "T2",  -- 老师怜悯：每日锻体碎片
     Legend_MLTT         = "T2",  -- 麻辣兔头：移速+假身
     Legend_QIANGWEI     = "T2",  -- 蔷薇主教：低血移速+冰爆
-    Legend_QIANYUE      = "T2",  -- 千月野：套装输出位
     Legend_SHANZHU      = "T2",  -- 厚皮甜心：护盾
     Legend_STRAWBERRY   = "T2",  -- 草莓奶昔：回复+减速
     Legend_SUANSUANCAO  = "T2",  -- 酸酸草：叠层减防
     Legend_TTSC         = "T2",  -- 兔兔生财：纯经济
-    Legend_XPING        = "T2",  -- 心平气和：套装防御位
-    Legend_YANGMAOKE    = "T2",  -- 养猫客：浣猫挡刀
-    Legend_YOUJISHUCAI  = "T2",  -- 有机蔬菜：料理翻倍
-    Legend_ZIDIE        = "T2",  -- 紫蝶：分身
 
     -------------------------------------------------------------
     -- T3 一般（数值固定/场景窄，稍多给点以保出勤）
     -------------------------------------------------------------
-    Legend_FQCD_SANITY = "T3",  -- 番茄炒蛋：san管理
     Legend_HUAIMIN     = "T3",  -- 怀民：夜晚随机buff
     Legend_MX_HEALTH   = "T3",  -- 毛旭：血上限+200
     Legend_MYXL_LEVEL  = "T3",  -- 灵尾印记：璇儿限定

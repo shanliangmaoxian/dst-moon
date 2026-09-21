@@ -27,7 +27,7 @@ local function RegisterEnchant()
         only_one = true,
         only_compound = true,
         is_special = true,
-        client_color = { 1, 0.45, 0.75, 1 },
+        client_color = { 0.8, 0, 0.8, 1 },
         check_equip_can_add = function(inst)
             return inst ~= nil and inst.prefab == "ccs_starstaff",
                 "樱语星辉只能附魔在星之杖上"
