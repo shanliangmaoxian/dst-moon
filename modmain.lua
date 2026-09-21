@@ -140,6 +140,7 @@ modimport("scripts/enchants/yudeng")      -- 余灯照夜明（与孑身处处�
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
 modimport("scripts/enchants/yingyu_xinghui") -- 小樱专属：樱语星辉
 modimport("scripts/enchants/infinite_star") -- 小樱专属：星之石（基于提供的文件）
+modimport("scripts/enchants/yingzhiqian") -- 小樱卡牌盒专属：樱之签
 modimport("scripts/enchants/tier_display") -- 档位显示注入（名称前缀 + 飘字分色，需在所有附魔注册之后加载）
 
 -- ------------------------------------------------------------------
