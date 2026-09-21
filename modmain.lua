@@ -73,7 +73,6 @@ modimport("scripts/features/enchant_remover")
 -- modimport("scripts/features/skin_ownership")
 modimport("scripts/features/wardrobe_anywhere")
 modimport("scripts/features/death_stats")
-modimport("scripts/features/damage_stats")
 modimport("scripts/features/ban_items")
 modimport("scripts/features/moon_shop")
 modimport("scripts/features/moon_qunyou")     -- 小月亮商店：召唤群友（瞬发 prefab + 召唤逻辑）
@@ -123,7 +122,6 @@ modimport("scripts/enchants/shanzhu")
 modimport("scripts/enchants/xingyunchengzhi")
 modimport("scripts/enchants/zidie")
 modimport("scripts/enchants/ccs_blessing")
-modimport("scripts/enchants/infinite_star")
 modimport("scripts/enchants/malatutou")
 modimport("scripts/enchants/yangmaoke")
 modimport("scripts/enchants/youjishucai")
@@ -140,6 +138,8 @@ modimport("scripts/enchants/qiuniang")    -- 建家能手穹酱（小穹联动�
 modimport("scripts/enchants/jieshen")     -- 孑身处处静（与余灯照夜明成套装）
 modimport("scripts/enchants/yudeng")      -- 余灯照夜明（与孑身处处静成套装）
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
+modimport("scripts/enchants/yingyu_xinghui") -- 小樱专属：樱语星辉
+modimport("scripts/enchants/infinite_star") -- 小樱专属：星之石（基于提供的文件）
 modimport("scripts/enchants/tier_display") -- 档位显示注入（名称前缀 + 飘字分色，需在所有附魔注册之后加载）
 
 -- ------------------------------------------------------------------
@@ -154,7 +154,7 @@ modimport("scripts/ui/album_drag")        -- 附魔收集册窗口拖动（客�
 -- 4. UI 界面 (仅当任一相关功能启用时加载)
 -- ------------------------------------------------------------------
 local CFG = GLOBAL.MOON_CFG
-if CFG.ENABLE_TREASURE or CFG.ENABLE_QL_HELPER or CFG.ENABLE_AUTO_PICKUP or CFG.ENABLE_SUICIDE or CFG.ENABLE_MORE_ENCHANTS or CFG.ENABLE_DEATH_STATS or CFG.ENABLE_DAMAGE_STATS or CFG.ENABLE_QUICK_CHAT or CFG.ENABLE_MOD_BROWSER then
+if CFG.ENABLE_TREASURE or CFG.ENABLE_QL_HELPER or CFG.ENABLE_AUTO_PICKUP or CFG.ENABLE_SUICIDE or CFG.ENABLE_MORE_ENCHANTS or CFG.ENABLE_DEATH_STATS or CFG.ENABLE_QUICK_CHAT or CFG.ENABLE_MOD_BROWSER then
     modimport("scripts/ui/moon_button")
     modimport("scripts/ui/moon_panel")
 end

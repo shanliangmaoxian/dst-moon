@@ -1,8 +1,7 @@
 -- 小月亮 附魔：无限星力
 -- 联动魔卡少女小樱mod(workshop-3043439883)
--- 获取：小樱(ccs)消耗225点魔力炼成「无限星力附魔石」(配方 ccs_legend_stone)
--- 效果：佩戴后魔力消耗全免 = 无限魔力（走 ccs_magic 组件的 SetConsume_bf 消耗减免接口）
--- 仅小樱可用（非小樱佩戴无效果），档位 T1
+-- 获取：仅小樱(ccs)消耗160点魔力炼成「无限星力附魔石」(配方 ccs_legend_stone)
+-- 效果：仅限小樱佩戴附魔卡牌盒，无限魔力，封印后摇速度×100
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
@@ -10,9 +9,98 @@ local CFG = GLOBAL.MOON_CFG
 if not CFG.ENABLE_MORE_ENCHANTS then return end
 
 local RECIPE_NAME = "ccs_legend_stone"
-local PRODUCT = "hh_effect_stone"
+local PRODUCT = "lmoon_effect_stone_infinite_star"
 local EFFECT_ID = "Legend_infinite_star"
+local EFFECT_NAME = "infinite_star"
+local CRAFT_MAGIC_COST = 160
 
+-- =========================================================
+-- 无限魔力：消耗入口拦截
+-- =========================================================
+-- 该玩家是否有"无限星力"效果
+local function HasInfiniteStar(inst)
+    if inst == nil or inst.prefab ~= "ccs" then return false end
+    local inventory = _G.TheWorld.ismastersim and inst.components.inventory
+        or inst.replica.inventory
+    if inventory == nil then return false end
+    for _, slot in pairs(_G.EQUIPSLOTS) do
+        local box = inventory:GetEquippedItem(slot)
+        if box ~= nil and box.prefab == "ccs_card_box" then
+            if _G.TheWorld.ismastersim then
+                local hh = box.components.hh_equip
+                if hh ~= nil and hh:HasEffectByName(EFFECT_ID) then return true end
+            elseif box._moon_infinite_star ~= nil and box._moon_infinite_star:value() then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+-- 需要"真实付费"的配方：产物是小月亮自己的附魔石（炼石不能被无限魔力免单，
+-- 否则可以无限刷石）。小樱本体那些消耗魔力的配方（物品/卡牌）不受影响。
+local function NeedsRealMagicCost(recname)
+    if recname == RECIPE_NAME then return true end
+    local recipe = _G.AllRecipes ~= nil and _G.AllRecipes[recname] or nil
+    local product = recipe ~= nil and recipe.product or nil
+    if type(product) ~= "string" then return false end
+    return product:find("^lmoon_effect_stone_") ~= nil
+        or product:find("^moon_effect_stone_") ~= nil
+end
+
+AddComponentPostInit("ccs_magic", function(self)
+    local old_DoDelta = self.DoDelta
+    function self:DoDelta(amount, ...)
+        local inst = self.inst
+        -- 本石配方必须实扣160魔力，不受卡牌减耗影响。
+        if type(amount) == "number" and amount < 0
+            and inst ~= nil and inst._moon_infinite_star_crafting
+        then
+            local previous = self.consume_bf
+            self.consume_bf = 0
+            local results = { _G.pcall(old_DoDelta, self, amount, ...) }
+            self.consume_bf = previous
+            if not results[1] then _G.error(results[2]) end
+            return _G.unpack(results, 2)
+        end
+        -- 与原 consume_bf = 1 语义一致：消耗归零但仍走完 DoDelta（保留事件推送）；
+        -- 制作炼石付款期间（_moon_crafting_magic_pay）不抵消，保证真实扣费
+        if type(amount) == "number" and amount < 0
+            and not (inst ~= nil and inst._moon_crafting_magic_pay)
+            and HasInfiniteStar(inst)
+        then
+            amount = 0
+        end
+        return old_DoDelta(self, amount, ...)
+    end
+end)
+
+-- 制作付费放行：本体已在 prefab 构造函数里包过一层 RemoveIngredients（扣魔力），
+-- AddPrefabPostInit 晚于构造函数，这里包到的是本体那层 → 我们位于更外层。
+AddPrefabPostInit("ccs", function(inst)
+    if not _G.TheWorld.ismastersim then return end
+    local builder = inst.components.builder
+    if builder == nil then return end
+    local old_RemoveIngredients = builder.RemoveIngredients
+    builder.RemoveIngredients = function(self, ingredients, recname, ...)
+        if not NeedsRealMagicCost(recname) then
+            return old_RemoveIngredients(self, ingredients, recname, ...)
+        end
+        local previous = inst._moon_crafting_magic_pay
+        local previous_star = inst._moon_infinite_star_crafting
+        inst._moon_crafting_magic_pay = true
+        inst._moon_infinite_star_crafting = recname == RECIPE_NAME
+        local results = { _G.pcall(old_RemoveIngredients, self, ingredients, recname, ...) }
+        inst._moon_crafting_magic_pay = previous
+        inst._moon_infinite_star_crafting = previous_star
+        if not results[1] then _G.error(results[2]) end
+        return _G.unpack(results, 2)
+    end
+end)
+
+-- =========================================================
+-- 词条注册
+-- =========================================================
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
     -- 检测小樱mod
@@ -21,84 +109,57 @@ AddPrefabPostInit("world", function(inst)
     _G.AddSpecialEquipEffect(EFFECT_ID, {
         name = "无限星力",
         client_text = "无限\n星力",
-        desc = "无限魔力(魔力消耗全免)\n仅小樱可用",
+        desc = "无限魔力(魔力消耗全免)\n封印后摇速度×100\n仅小樱佩戴卡牌盒生效",
         check_desc = "星之力，取之不尽～",
+        recipes = { PRODUCT },
+        obtains = {},
+        obtain_desc = "仅小樱消耗160魔力制作",
         can_add = false,
         only_one = true,
-        is_special = false,
+        is_special = true,
         client_color = { 0.8, 0, 0.8, 1 },
         check_equip_can_add = function(equip_inst)
-            return true, "满足条件"
+            return equip_inst ~= nil and equip_inst.prefab == "ccs_card_box",
+                "只能附魔在小樱的卡牌盒上"
+        end,
+
+        start_fn = function(equip_inst)
+            if equip_inst._moon_infinite_star ~= nil then
+                equip_inst._moon_infinite_star:set(true)
+            end
+        end,
+        end_fn = function(equip_inst)
+            if equip_inst._moon_infinite_star ~= nil then
+                equip_inst._moon_infinite_star:set(false)
+            end
         end,
 
         on_equip_fn = function(equip_inst, owner, value)
-            if owner.prefab ~= "ccs" then
+            if owner ~= nil and owner.prefab ~= "ccs" then
                 if owner.components.talker then
                     owner.components.talker:Say("星星之力只回应小樱的呼唤！")
                 end
                 return
             end
-            _G.Moon_AddEffect(owner, "infinite_star", EFFECT_ID, 1)
-            local magic = owner.components.ccs_magic
-            if magic and not owner._infinite_star_hooked then
-                owner._infinite_star_hooked = true
-                owner._infinite_star_old_bf = magic.consume_bf
-                magic:SetConsume_bf(1) -- 负向 DoDelta × (1-1) = 0，魔力消耗全免
-            end
+            _G.Moon_AddEffect(owner, EFFECT_NAME, EFFECT_ID, 1)
         end,
 
         un_equip_fn = function(equip_inst, owner, value)
-            _G.Moon_ReduceEffect(owner, "infinite_star", EFFECT_ID, 1)
-            if not _G.Moon_HasEffect(owner, "infinite_star") then
-                local magic = owner.components.ccs_magic
-                if magic and owner._infinite_star_hooked then
-                    magic:SetConsume_bf(owner._infinite_star_old_bf or 0)
-                    owner._infinite_star_old_bf = nil
-                    owner._infinite_star_hooked = nil
-                end
-            end
+            _G.Moon_ReduceEffect(owner, EFFECT_NAME, EFFECT_ID, 1)
         end,
     })
 
-    -- T1：进掉落池（权重走 tier_config 中央表）
-    _G.Moon_RegisterEnchantDrop(EFFECT_ID, 0.01)
+    -- 仅制作获取，不注册随机掉落。
 end)
 
 -- =========================================================
--- 炼成配方：消耗225小樱魔力 → 产物 hh_effect_stone 并注入
--- Legend_infinite_star 效果（HH 通用附魔石 prefab + hh_effect 字段）
+-- 炼成配方：消耗160小樱魔力 → 产物 lmoon_effect_stone_infinite_star
+-- （dummy prefab，由 lmoon_effect_stones.lua 的 OnBuiltFn 生成真正的
+--   HH 附魔石并注入 Legend_infinite_star 效果）
 -- =========================================================
-local function SetLegendStone(item)
-    if item == nil or item.prefab ~= PRODUCT then
-        return false
-    end
-    item.hh_effect = EFFECT_ID
-    if item.HH_Update_Server ~= nil then
-        item:HH_Update_Server()
-    end
-    return true
-end
-
-local function OnBuildLegendStone(builder, data)
-    local recipe = data ~= nil and data.recipe or nil
-    local recipe_name = type(recipe) == "table" and recipe.name or recipe
-    if recipe_name ~= RECIPE_NAME or not SetLegendStone(data.item) then
-        return
-    end
-    local display_name = builder ~= nil and builder.GetDisplayName ~= nil
-        and builder:GetDisplayName()
-        or "玩家"
-    _G.TheNet:Announce(string.format("恭喜 %s 炼成了「无限星力附魔石」！", tostring(display_name)))
-end
-
 STRINGS.NAMES.CCS_LEGEND_STONE = "无限星力附魔石"
-STRINGS.RECIPE_DESC.CCS_LEGEND_STONE = "消耗225点小樱魔力，炼成无限星力附魔石。"
-
-AddPlayerPostInit(function(inst)
-    if _G.TheWorld.ismastersim then
-        inst:ListenForEvent("builditem", OnBuildLegendStone)
-    end
-end)
+STRINGS.RECIPE_DESC.CCS_LEGEND_STONE = "消耗160点小樱魔力，炼成无限星力附魔石。"
+STRINGS.NAMES.LMOON_EFFECT_STONE_INFINITE_STAR = "无限星力附魔石"
 
 AddSimPostInit(function()
     if not _G.Moon_IsHHEnabled() then return end
@@ -111,7 +172,7 @@ AddSimPostInit(function()
         {
             _G.Ingredient(
                 _G.CHARACTER_INGREDIENT.CCS_MAGIC,
-                225,
+                CRAFT_MAGIC_COST,
                 "images/inventoryimages/ccs_magic.xml"
             ),
         },
@@ -119,11 +180,82 @@ AddSimPostInit(function()
         {
             product = PRODUCT,
             builder_tag = "ccs",
-            --nounlock = true,
             no_deconstruction = true,
             atlas = "images/hh_icon/hh_items.xml",
             image = "hh_effect_stone.tex",
+            -- 本体的材料检查用 math.ceil(current)，159.x 魔力也会判定通过，
+            -- 这里按实际值卡住，避免"魔力不够也能炼"
+            canbuild = function(recipe, builder)
+                local magic = builder.components.ccs_magic
+                if builder.prefab ~= "ccs" or magic == nil then
+                    return false, "仅小樱可以炼成"
+                end
+                if magic.current < CRAFT_MAGIC_COST then
+                    return false, "魔力不足"
+                end
+                return true
+            end,
         },
         { "CCS_TAB1" }
     )
 end)
+
+-- 卡牌盒附魔及客机同步；已有的附魔槽位设置不作改动。
+AddPrefabPostInit("ccs_card_box", function(inst)
+    if not _G.Moon_IsHHEnabled() then return end
+    inst._moon_infinite_star = _G.net_bool(inst.GUID, "moon.infinite_star")
+    inst:AddTag("hh_equip")
+    if not _G.TheWorld.ismastersim then return end
+    if inst.components.hh_equip == nil then
+        inst:AddComponent("hh_equip")
+        inst.components.hh_equip:SetMaxGemLimit(3)
+        inst.components.hh_equip:SetEquipBuffLimit(3)
+    end
+    inst:DoTaskInTime(0, function(box)
+        box._moon_infinite_star:set(box.components.hh_equip:HasEffectByName(EFFECT_ID))
+    end)
+end)
+
+-- 第2帧封印生效，后续时间缩为1/100。复制状态以保留未附魔时的原动作。
+local function InstallSealState(sg)
+    local original = sg.states.ccs_seal_magic
+    local handler = _G.ACTIONS.CCS_SEAL and sg.actionhandlers[_G.ACTIONS.CCS_SEAL]
+    if original == nil or handler == nil then return end
+    local state = _G.setmetatable({}, _G.getmetatable(original))
+    for key, value in pairs(original) do state[key] = value end
+    state.name = "moon_infinite_star_seal"
+    if sg.name == "wilson_client" then
+        state.server_states = { [_G.hash(state.name)] = true }
+    end
+    local action_time = 2 * _G.FRAMES
+    local end_time = action_time
+    state.timeline = {}
+    for _, event in ipairs(original.timeline or {}) do
+        local copy = _G.setmetatable({}, _G.getmetatable(event))
+        for key, value in pairs(event) do copy[key] = value end
+        if copy.time > action_time then
+            copy.time = action_time + (copy.time - action_time) / 100
+        end
+        end_time = _G.math.max(end_time, copy.time)
+        state.timeline[#state.timeline + 1] = copy
+    end
+    state.onenter = function(inst, ...)
+        original.onenter(inst, ...)
+        inst.sg:SetTimeout(end_time + _G.FRAMES)
+    end
+    state.onexit = function(inst, ...)
+        if original.onexit ~= nil then original.onexit(inst, ...) end
+        inst.AnimState:Resume()
+        inst.AnimState:SetDeltaTimeMultiplier(1)
+    end
+    sg.states[state.name] = state
+    local destination = handler.deststate
+    handler.deststate = function(inst, action, ...)
+        local result = destination
+        if type(destination) == "function" then result = destination(inst, action, ...) end
+        if result == "ccs_seal_magic" and HasInfiniteStar(inst) then return state.name end
+        return result
+    end
+end
+AddStategraphPostInit("wilson", InstallSealState)
+AddStategraphPostInit("wilson_client", InstallSealState)
