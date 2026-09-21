@@ -21,7 +21,8 @@ local function RegisterEnchant()
         ui_from_desc = "小樱消耗225魔力制作；成功封印有0.05%概率获得，1500次保底",
         obtain_desc = "小樱消耗225魔力制作；每次成功封印0.05%概率获得，1500次保底（掉落后重置）",
         obtains = {},
-        recipes = { PRODUCT },
+        -- 不声明 recipes：不写 __recipe__ 别名键，与其他附魔一致。
+        -- 代价是制作栏配方格不再叠加 client_text 花字（物品名仍正常显示）。
         can_add = false,
         only_one = true,
         only_compound = true,

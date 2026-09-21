@@ -1,7 +1,7 @@
 -- 小月亮 附魔：无限星力
 -- 联动魔卡少女小樱mod(workshop-3043439883)
 -- 获取：仅小樱(ccs)消耗160点魔力炼成「无限星力附魔石」(配方 ccs_legend_stone)
--- 效果：仅限小樱佩戴附魔卡牌盒，无限魔力，封印后摇速度×100
+-- 效果：仅限小樱佩戴附魔卡牌盒，无限魔力，封印后摇及回/无/风/力牌施法速度×100
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
@@ -109,11 +109,11 @@ AddPrefabPostInit("world", function(inst)
     _G.AddSpecialEquipEffect(EFFECT_ID, {
         name = "无限星力",
         client_text = "无限\n星力",
-        desc = "无限魔力(魔力消耗全免)\n封印后摇速度×100\n仅小樱佩戴卡牌盒生效",
+        desc = "无限魔力(魔力消耗全免)\n封印后摇速度×100\n回牌、无牌、风牌、力牌施法速度×100\n仅小樱佩戴卡牌盒生效",
         check_desc = "星之力，取之不尽～",
-        recipes = { PRODUCT },
         obtains = {},
         obtain_desc = "仅小樱消耗160魔力制作",
+        -- 不声明 recipes：不写 __recipe__ 别名键，与其他附魔一致。
         can_add = false,
         only_one = true,
         is_special = true,
@@ -259,3 +259,77 @@ local function InstallSealState(sg)
 end
 AddStategraphPostInit("wilson", InstallSealState)
 AddStategraphPostInit("wilson_client", InstallSealState)
+
+-- 四张指定卡牌的整段施法加速；不改变卡牌效果、冷却或其他施法。
+local FAST_CAST_CARDS = {
+    ccs_cards_10 = true, -- 回牌
+    ccs_cards_29 = true, -- 无牌
+    ccs_cards_5 = true,  -- 风牌
+    ccs_cards_13 = true, -- 力牌
+}
+
+local function InstallCardCast(sg)
+    for _, name in ipairs({ "castspell", "quickcastspell" }) do
+        local state = sg.states[name]
+        if state ~= nil then
+            local old_onenter = state.onenter
+            local old_onexit = state.onexit
+            local timeline = state.timeline or {}
+            state.onenter = function(inst, ...)
+                local action = inst:GetBufferedAction()
+                local card = action ~= nil and action.invobject or nil
+                local fast = action ~= nil and action.action == _G.ACTIONS.CASTAOE
+                    and card ~= nil and FAST_CAST_CARDS[card.prefab] == true
+                    and HasInfiniteStar(inst)
+                local mem = inst.sg.statemem
+                mem._moon_card_cast_fast = fast
+                mem._moon_card_cast_done = fast and {} or nil
+                old_onenter(inst, ...)
+                if fast and inst.sg.statemem == mem then
+                    inst.AnimState:SetDeltaTimeMultiplier(100)
+                end
+            end
+            state.onexit = function(inst, ...)
+                if inst.sg.statemem._moon_card_cast_fast then
+                    inst.AnimState:SetDeltaTimeMultiplier(1)
+                end
+                if old_onexit ~= nil then return old_onexit(inst, ...) end
+            end
+
+            local function RunFastEvent(inst, index)
+                local done = inst.sg.statemem._moon_card_cast_done
+                if done ~= nil and not done[index] then
+                    done[index] = true
+                    timeline[index].fn(inst)
+                end
+            end
+            state.timeline = {}
+            for index, event in ipairs(timeline) do
+                state.timeline[#state.timeline + 1] = _G.TimeEvent(event.time / 100, function(inst)
+                    RunFastEvent(inst, index)
+                end)
+                state.timeline[#state.timeline + 1] = _G.TimeEvent(event.time, function(inst)
+                    if not inst.sg.statemem._moon_card_cast_fast then event.fn(inst) end
+                end)
+            end
+            _G.table.sort(state.timeline, function(a, b) return a.time < b.time end)
+
+            -- 100倍后可能一帧内播完；确保动画结束时施法事件已且仅已执行一次。
+            local finished = state.events and state.events.animqueueover
+            if finished ~= nil then
+                state.events.animqueueover = _G.EventHandler("animqueueover", function(inst, ...)
+                    if inst.sg.statemem._moon_card_cast_fast and inst.AnimState:AnimDone() then
+                        local mem = inst.sg.statemem
+                        for index in ipairs(timeline) do
+                            RunFastEvent(inst, index)
+                            if inst.sg.statemem ~= mem then return end
+                        end
+                    end
+                    return finished.fn(inst, ...)
+                end)
+            end
+        end
+    end
+end
+AddStategraphPostInit("wilson", InstallCardCast)
+AddStategraphPostInit("wilson_client", InstallCardCast)
