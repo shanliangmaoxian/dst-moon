@@ -99,7 +99,8 @@ containers.params.lmoon_stone_album = {
     -- 若这里也写 "pack"，开收集册会强制关掉背包、开背包也会关掉收集册，两者无法并存。
     -- 取独立 type 后互不干扰；该值未命中 playerhud 的特殊分支，仍落在 containerroot，位置不变。
     type = "lmoon_album",
-    openlimit = 1,
+    -- 不设 openlimit：与宝箱一致，扔在地上后允许多人同时打开（RUMMAGE.fn 里有
+    -- CanOpen() 校验，若设 openlimit=1 则一人开着时其他玩家会打不开）。
     itemtestfn = AlbumItemTest,
 }
 local page_w = (ALBUM_COLS - 1) * ALBUM_SLOT_STEP
