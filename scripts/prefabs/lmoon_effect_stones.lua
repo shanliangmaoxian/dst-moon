@@ -1,5 +1,6 @@
 -- reference from aria mod https://steamcommunity.com/sharedfiles/filedetails/?id=2418617371
-local function make_stone_prefab(prefab_name, effect_name)
+-- announce：可选，产物炼成时的全服公告模板（%s 为玩家名）
+local function make_stone_prefab(prefab_name, effect_name, announce)
     local function fn()
         local inst = CreateEntity()
 
@@ -22,6 +23,11 @@ local function make_stone_prefab(prefab_name, effect_name)
             stone.Transform:SetPosition(x, y, z)
             builder.components.inventory:GiveItem(stone)
 
+            if announce ~= nil and TheNet ~= nil then
+                local name = builder.GetDisplayName ~= nil and builder:GetDisplayName() or "玩家"
+                TheNet:Announce(string.format(announce, tostring(name)))
+            end
+
             inst:Remove()
         end
 
@@ -31,4 +37,6 @@ local function make_stone_prefab(prefab_name, effect_name)
 end
 
 return 	make_stone_prefab('moon_effect_stone_hanyue_test', "Legend_HANYUE_TEST"),
-		make_stone_prefab('lmoon_effect_stone_quickcast', "lmoon_effect_quickcast")
+		make_stone_prefab('lmoon_effect_stone_quickcast', "lmoon_effect_quickcast"),
+		make_stone_prefab('lmoon_effect_stone_infinite_star', "Legend_infinite_star",
+			"恭喜 %s 炼成了「无限星力附魔石」！")

@@ -138,8 +138,9 @@ local function ItemHasEnchant(item, enchant_id)
     return false
 end
 
-local function GiveEnchantStone(owner, enchant_id)
-    local cfg = USE_TIME_DROPS[enchant_id]
+-- cfg 可选：外部掉落通道传入自己的配置（name/msg），缺省回落到使用时长掉落表
+local function GiveEnchantStone(owner, enchant_id, cfg)
+    cfg = cfg or USE_TIME_DROPS[enchant_id]
     local ok, stone = _G.pcall(_G.HHSpawnStoneById, enchant_id)
     if not (ok and stone) then return end
     if owner.components.inventory then
@@ -264,12 +265,15 @@ AddPlayerPostInit(function(player)
         end
     end)
 
-    -- total 累计值随玩家存档
+    -- total 累计值 / 封印保底计数随玩家存档
     local old_onsave = player.OnSave
     player.OnSave = function(inst, data)
         if old_onsave then old_onsave(inst, data) end
         if inst._moon_usedrop_total then
             data.moon_usedrop_total = inst._moon_usedrop_total
+        end
+        if inst._moon_sealdrop_count then
+            data.moon_sealdrop_count = inst._moon_sealdrop_count
         end
     end
     local old_onload = player.OnLoad
@@ -278,8 +282,77 @@ AddPlayerPostInit(function(player)
         if data and data.moon_usedrop_total then
             inst._moon_usedrop_total = data.moon_usedrop_total
         end
+        if data and data.moon_sealdrop_count then
+            inst._moon_sealdrop_count = data.moon_sealdrop_count
+        end
     end
 end)
+
+-- =========================================================
+-- 封印成功掉落（含保底）
+-- 小樱封印成功后按概率掉落指定附魔石：每次成功封印计数 +1，
+-- 达到保底次数必掉；掉落后计数清零。计数随玩家存档保存。
+-- 配置：{ 附魔id = { chance=单次概率, pity=保底次数, name=附魔名, msg=获取飘字 } }
+-- 安全：词条未被 HH 注册时该通道自动休眠，不会产出无效附魔石。
+-- =========================================================
+local SEAL_DROPS = {
+    -- 樱语星辉：小樱封印成功 0.05% 概率掉落，1500 次保底（掉落后重置）
+    -- 依赖尚未接入的 moon_utils/yingyu_starstaff（星之杖真伤→樱花伤害），
+    -- 其词条注册前本通道不会触发；接入时确认 id 与此处一致即可。
+    ["lmoon_effect_yingyu_xinghui"] = {
+        chance = 0.0005,
+        pity = 1500,
+        name = "樱语星辉",
+        msg = "星辉回应了封印的祈愿…",
+    },
+}
+
+-- 词条是否已由 HH 注册（避免掉落无效果的附魔石）
+local function IsEnchantRegistered(enchant_id)
+    local list = HH_EQUIP_BUFF_LIST
+    return type(list) == "table" and list[enchant_id] ~= nil
+end
+
+local function RollSealDrop(player, enchant_id, cfg)
+    if player == nil or not player:IsValid() then return end
+    player._moon_sealdrop_count = player._moon_sealdrop_count or {}
+    local count = (player._moon_sealdrop_count[enchant_id] or 0) + 1
+    if count >= (cfg.pity or math.huge) or math.random() <= (cfg.chance or 0) then
+        player._moon_sealdrop_count[enchant_id] = 0
+        GiveEnchantStone(player, enchant_id, cfg)
+    else
+        player._moon_sealdrop_count[enchant_id] = count
+    end
+end
+
+-- 挂钩小樱的封印动作：只统计"封印成功"（目标被击杀或被移除）
+local seal_drop_fn = nil
+local function HookSealAction()
+    if not _G.MOON_CFG or not _G.MOON_CFG.ENABLE_MORE_ENCHANTS then return end
+    local actions = _G.ACTIONS
+    local action = actions ~= nil and actions.CCS_SEAL or nil
+    if action == nil or type(action.fn) ~= "function" or action.fn == seal_drop_fn then return end
+    local old_fn = action.fn
+    seal_drop_fn = function(act)
+        local result = old_fn(act)
+        local target = act ~= nil and act.target or nil
+        local sealed = target == nil or not target:IsValid()
+            or (target.components ~= nil and target.components.health ~= nil
+                and target.components.health:IsDead())
+        local doer = act ~= nil and act.doer or nil
+        if sealed and doer ~= nil and doer:IsValid() then
+            for id, cfg in pairs(SEAL_DROPS) do
+                if IsEnchantRegistered(id) then
+                    RollSealDrop(doer, id, cfg)
+                end
+            end
+        end
+        return result
+    end
+    action.fn = seal_drop_fn
+end
+
+AddSimPostInit(HookSealAction)
 
 -- 单人单档获取记录随世界存档
 AddPrefabPostInit("world", function(inst)
