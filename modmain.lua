@@ -134,6 +134,12 @@ modimport("scripts/enchants/xiaohudie")
 modimport("scripts/enchants/hanyue")      -- 寒月公主
 modimport("scripts/enchants/yufenfen")    -- 雨纷纷
 modimport("scripts/enchants/lianlian")    -- 无意识的恋恋
+modimport("scripts/enchants/gua")         -- 挂！每日天降奖池
+modimport("scripts/enchants/wdsn")        -- 我打宿傩？世界天数限定窗口
+modimport("scripts/enchants/hjbh")        -- 厚积薄发：蓄力范围真伤
+modimport("scripts/enchants/dunai")       -- 毒奶：伤害转治疗+溢出降血上限
+modimport("scripts/enchants/dwd")         -- 大卫戴：料理溢出治疗转血上限+治疗池
+modimport("scripts/enchants/lianlianjiang") -- 蔷薇偶像恋恋酱：基础数值+骰子获取（恋恋联动）
 modimport("scripts/enchants/qiuniang")    -- 建家能手穹酱（小穹联动）
 modimport("scripts/enchants/jieshen")     -- 孑身处处静（与余灯照夜明成套装）
 modimport("scripts/enchants/yudeng")      -- 余灯照夜明（与孑身处处静成套装）
