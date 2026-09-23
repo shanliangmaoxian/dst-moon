@@ -74,6 +74,10 @@ TUNING.MOON_ENCHANT_TIERS = {
     Legend_YANGMAOKE      = "T1",  -- 养猫客：浣猫挡刀
     Legend_YOUJISHUCAI    = "T1",  -- 有机蔬菜：料理翻倍
     Legend_QIANYUE        = "T1",  -- 千月野：套装输出位
+    Legend_JI_CHUN        = "T1",  -- 季·春：对应季节打boss 5‰ 专属掉落（套装二期）
+    Legend_JI_XIA         = "T1",  -- 季·夏：对应季节打boss 5‰ 专属掉落（套装二期）
+    Legend_JI_QIU         = "T1",  -- 季·秋：对应季节打boss 5‰ 专属掉落（套装二期）
+    Legend_JI_DONG        = "T1",  -- 季·冬：对应季节打boss 5‰ 专属掉落（套装二期）
 
     -------------------------------------------------------------
     -- T2 均衡（基准线）

@@ -141,6 +141,7 @@ modimport("scripts/enchants/dunai")       -- 毒奶：伤害转治疗+溢出降�
 modimport("scripts/enchants/dwd")         -- 大卫戴：料理溢出治疗转血上限+治疗池
 modimport("scripts/enchants/lianlianjiang") -- 蔷薇偶像恋恋酱：基础数值+骰子获取（恋恋联动）
 modimport("scripts/enchants/qiuniang")    -- 建家能手穹酱（小穹联动）
+modimport("scripts/enchants/ji")          -- 四季系列：季春/夏/秋/冬（季节限定掉落，套装二期）
 modimport("scripts/enchants/jieshen")     -- 孑身处处静（与余灯照夜明成套装）
 modimport("scripts/enchants/yudeng")      -- 余灯照夜明（与孑身处处静成套装）
 modimport("scripts/enchants/aether") -- 拆除法杖功能性增强
