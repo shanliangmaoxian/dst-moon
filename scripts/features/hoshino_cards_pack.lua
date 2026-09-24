@@ -97,3 +97,19 @@ AddPrefabPostInit(PACK_PREFAB, function(inst)
         end)
     end
 end)
+
+--- 选完卡牌后自动关闭平板
+--- 复用原 mod 白卡/金卡同款机制：服务端经 hoshino_com_rpc_event 下发
+--- "hoshino_event.inspect_hud_force_close"，客户端平板在 ThePlayer 上监听此事件触发 pad_close
+AddComponentPostInit("hoshino_cards_sys", function(self)
+    local inst = self.inst
+    if not TheWorld.ismastersim then
+        return
+    end
+    inst:ListenForEvent("hoshino_cards_sys.card_activated", function()
+        local rpc = inst.components ~= nil and inst.components.hoshino_com_rpc_event or nil
+        if rpc ~= nil then
+            rpc:PushEvent("hoshino_event.inspect_hud_force_close")
+        end
+    end)
+end)
