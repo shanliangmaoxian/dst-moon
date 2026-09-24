@@ -681,6 +681,18 @@ configuration_options = {
         default = "",
     },
 
+    AddTitle("小鸟模组联动"),
+    {
+        name = "ENABLE_HOSHINO_CARDS_PACK",
+        label = "小鸟卡包堆叠",
+        hover = "基础之理/神秘核心/窥秘权柄/最高神秘卡包可堆叠（同类型才可堆），开包只消耗 1 个。需启用小鸟模组",
+        options = {
+            { description = "开启", data = true },
+            { description = "关闭", data = false },
+        },
+        default = false,
+    },
+
     AddTitle("强度配置"),
     {
         name = "HANYUE_TEST_LEVEL",

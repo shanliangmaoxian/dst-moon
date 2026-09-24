@@ -76,6 +76,7 @@ modimport("scripts/features/death_stats")
 modimport("scripts/features/ban_items")
 modimport("scripts/features/moon_shop")
 modimport("scripts/features/moon_qunyou")     -- 小月亮商店：召唤群友（瞬发 prefab + 召唤逻辑）
+modimport("scripts/features/hoshino_cards_pack") -- 小鸟联动：四种卡包可堆叠（需小鸟 mod）
 modimport("scripts/features/mob_enhance/init")
 modimport("scripts/features/start_gift")        -- 开局礼包（服务端逻辑，内部按配置启用）
 modimport("scripts/features/start_gift_client") -- 开局礼包（客户端弹窗 UI，内部按配置启用）
