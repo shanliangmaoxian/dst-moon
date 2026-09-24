@@ -12,6 +12,23 @@ if not CFG.ENABLE_MORE_ENCHANTS then return end
 
 local STEALTH_CD = 10 -- 免疫仇恨被主动攻击解除后的恢复cd（秒）
 
+-- 通用兜底：任何以恋恋玩家为 afflicter 的直扣血伤害(health:DoDelta)也算主动攻击
+-- 覆盖魔女等 mod 中不走 combat 攻击链、但传了 afflicter 的技能伤害（如泰拉棱镜·剑雨）
+AddComponentPostInit("health", function(self)
+    if self._moon_lianlian_hooked then return end
+    self._moon_lianlian_hooked = true
+    local Old_DoDelta = self.DoDelta
+    self.DoDelta = function(self, amount, overtime, cause, ignore_invincible, afflicter, ...)
+        if amount ~= nil and amount < 0
+                and afflicter ~= nil and afflicter.isplayer
+                and afflicter ~= self.inst
+                and afflicter._lianlian_break_stealth ~= nil then
+            afflicter._lianlian_break_stealth("魔法波动暴露了位置！10秒后重新隐身...")
+        end
+        return Old_DoDelta(self, amount, overtime, cause, ignore_invincible, afflicter, ...)
+    end
+end)
+
 -- =========================================================
 -- Part 1: 骰子事件监听（记录 roll 出 5 和 14）
 -- =========================================================
@@ -131,18 +148,38 @@ AddPrefabPostInit("world", function(inst)
                     owner._lianlian_stealth_on = false
                 end
 
-                -- 主动攻击 → 解除免疫仇恨，10秒后自动恢复
-                owner._lianlian_attack_handler = function(attacker, data)
-                    if not _G.Moon_HasEffect(owner, "lianlian") then return end
-                    if owner._lianlian_stealth_on then
-                        stealthOff()
-                        owner._lianlian_stealth_until = _G.GetTime() + STEALTH_CD
-                        if owner.components.talker then
-                            owner.components.talker:Say("被发现了！10秒后重新隐身...")
-                        end
+                -- 统一破隐：解除免疫仇恨，10秒后自动恢复
+                local function breakStealth(tip)
+                    if not owner._lianlian_stealth_on then return end
+                    stealthOff()
+                    owner._lianlian_stealth_until = _G.GetTime() + STEALTH_CD
+                    if tip and owner.components.talker then
+                        owner.components.talker:Say(tip)
                     end
                 end
+                -- 供 health:DoDelta 兜底钩调用（见文件顶部）
+                owner._lianlian_break_stealth = breakStealth
+
+                -- 主动攻击 → 解除免疫仇恨
+                owner._lianlian_attack_handler = function()
+                    if not _G.Moon_HasEffect(owner, "lianlian") then return end
+                    breakStealth("被发现了！10秒后重新隐身...")
+                end
                 owner:ListenForEvent("onattackother", owner._lianlian_attack_handler)
+                -- AoE 攻击(DoAreaAttack)推 onareaattackother；攻击命中(GetAttacked)推 onhitother，一并监听
+                owner:ListenForEvent("onareaattackother", owner._lianlian_attack_handler)
+                owner:ListenForEvent("onhitother", owner._lianlian_attack_handler)
+
+                -- 魔女(2578692071)施法统一入口：elaina_magic 扣魔力时在玩家身上推
+                -- elaina_magic_delta，绝大多数技能伤害是 health:DoDelta 直扣血、
+                -- 不产生任何 combat 攻击事件，靠这条覆盖（消耗魔力即视为主动攻击）
+                owner._lianlian_magic_handler = function(_, data)
+                    if not _G.Moon_HasEffect(owner, "lianlian") then return end
+                    if data and data.amount and data.amount < 0 then
+                        breakStealth("魔法波动暴露了位置！10秒后重新隐身...")
+                    end
+                end
+                owner:ListenForEvent("elaina_magic_delta", owner._lianlian_magic_handler)
 
                 -- 周期检测：cd 结束后恢复隐身
                 owner._lianlian_stealth_task = owner:DoPeriodicTask(0.5, function()
@@ -186,8 +223,15 @@ AddPrefabPostInit("world", function(inst)
 
                 if owner._lianlian_attack_handler then
                     owner:RemoveEventCallback("onattackother", owner._lianlian_attack_handler)
+                    owner:RemoveEventCallback("onareaattackother", owner._lianlian_attack_handler)
+                    owner:RemoveEventCallback("onhitother", owner._lianlian_attack_handler)
                     owner._lianlian_attack_handler = nil
                 end
+                if owner._lianlian_magic_handler then
+                    owner:RemoveEventCallback("elaina_magic_delta", owner._lianlian_magic_handler)
+                    owner._lianlian_magic_handler = nil
+                end
+                owner._lianlian_break_stealth = nil
                 if owner._lianlian_stealth_task then
                     owner._lianlian_stealth_task:Cancel()
                     owner._lianlian_stealth_task = nil
