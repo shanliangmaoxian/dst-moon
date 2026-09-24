@@ -116,6 +116,7 @@ modimport("scripts/enchants/junjun")
 modimport("scripts/enchants/luo")
 modimport("scripts/enchants/lianggongcang")
 modimport("scripts/enchants/huaimin")
+modimport("scripts/enchants/huaiminmin")  -- 怀民民：攻/范围加成，镜华翻倍+真伤+夜晚催眠
 modimport("scripts/enchants/laodong")
 modimport("scripts/enchants/changpi")
 modimport("scripts/enchants/xiaoguai")
