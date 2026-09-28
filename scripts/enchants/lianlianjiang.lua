@@ -39,7 +39,7 @@ AddPlayerPostInit(function(inst)
             player.components.inventory:GiveItem(stone, nil, player:GetPosition())
             -- 公屏公告
             _G.pcall(function()
-                _G.TheNet:Announce("爱 love heart 恋 魔法 wink chuu")
+                _G.TheNet:Announce("叮咚～蔷薇偶像恋恋酱闪亮登场！我要推一辈子的蔷薇偶像！")
             end)
         end
     end)

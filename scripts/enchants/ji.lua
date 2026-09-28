@@ -77,10 +77,10 @@ local function TryGainSeason(owner, skey)
     if not health or health:IsDead() then return end
     local cost = math.min(health.maxhealth * HEALTH_COST, health.currenthealth - 1)
     if cost <= 0 then return end
-    health:DoDelta(-cost, false, "ji_cost")
-
+    -- 先加层数再扣血：扣血触发的 healthdelta → UpdateDynamic 才能按新层数生效
     st[skey].stacks = st[skey].stacks + 1
     st[skey].expire = _G.GetTime() + LAYER_TIME
+    health:DoDelta(-cost, false, "ji_cost")
 
     -- 声生不息：已有其他季节印记时 +2 层（二期套装联动标记）
     local has_other = false
@@ -96,7 +96,7 @@ local function TryGainSeason(owner, skey)
     if owner.components.talker then
         local extra = has_other and " 声生不息+2 四季流转+" .. owner._ji_sizhou
             or (owner._ji_sizhou and owner._ji_sizhou > 0 and " 四季流转+" .. owner._ji_sizhou or "")
-        owner.components.talker:Say("「四时一隅·" .. SEASONS[skey].name:sub(4) .. "」×" .. st[skey].stacks .. extra)
+        owner.components.talker:Say("「四时一隅·" .. SEASONS[skey].short .. "」×" .. st[skey].stacks .. extra)
     end
 end
 

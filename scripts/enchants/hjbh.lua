@@ -89,9 +89,11 @@ AddPrefabPostInit("world", function(inst)
                 end
                 owner:ListenForEvent("onattackother", owner._hjbh_attack_handler)
 
-                -- 蓄力：15秒无攻击后每0.5秒存一次
+                -- 蓄力：15秒无攻击后每0.5秒存一次（死亡/幽灵期间不蓄力）
                 owner._hjbh_tick = function()
                     if not _G.Moon_HasEffect(owner, EFFECT_KEY) then return end
+                    local hp = owner.components.health
+                    if hp and hp:IsDead() then return end
                     if owner._hjbh_stack_count >= MAX_STACKS then return end
                     if _G.GetTime() - (owner._hjbh_last_attack or 0) < IDLE_GATE then return end
                     local dmg = snapshot_damage(owner)
