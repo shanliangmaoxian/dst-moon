@@ -210,7 +210,8 @@ AddPrefabPostInit("world", function(inst)
                                 and v.components.health and not v.components.health:IsDead() then
                             ApplySoulflame(v)
                             if v.components.health.DoHHDelta then
-                                v.components.health:DoHHDelta(-total, owner, "安燃灼烧")
+                                -- cause 传 nil：HH 的 DoHHDelta 会把字符串 cause 飘字（SpawnClientStrFx），屏蔽
+                                v.components.health:DoHHDelta(-total, owner, nil)
                             else
                                 v.components.health:DoDelta(-total, false, "anran_burn")
                             end
@@ -237,7 +238,7 @@ AddPrefabPostInit("world", function(inst)
                         -- 贯通真伤：100 + 1% 目标最大生命
                         local true_dmg = TRUE_BASE + (health.maxhealth or 100) * TRUE_MAXHP_PCT
                         if health.DoHHDelta then
-                            health:DoHHDelta(-true_dmg, owner, "安燃贯通")
+                            health:DoHHDelta(-true_dmg, owner, nil) -- cause 传 nil 屏蔽飘字
                         else
                             health:DoDelta(-true_dmg, false, "anran_true")
                         end
@@ -263,7 +264,7 @@ AddPrefabPostInit("world", function(inst)
                     ApplySoulflame(attacker)
                     local total = owner._anran_orb_count * ORB_AOE_DMG
                     if hp.DoHHDelta then
-                        hp:DoHHDelta(-total, owner, "安燃反击")
+                        hp:DoHHDelta(-total, owner, nil) -- cause 传 nil 屏蔽飘字
                     else
                         hp:DoDelta(-total, false, "anran_counter")
                     end
@@ -296,9 +297,6 @@ AddPrefabPostInit("world", function(inst)
                                     end
                                 end
                             end)
-                            if owner.components.talker then
-                                owner.components.talker:Say("安燃不灭！血量锁定50%，无敌5秒！")
-                            end
                             -- 火焰爆发特效
                             local x, y, z = owner.Transform:GetWorldPosition()
                             for i = 1, 6 do
