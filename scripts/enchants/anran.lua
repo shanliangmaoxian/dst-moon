@@ -4,8 +4,7 @@
 -- 灵魂烈焰：被命中目标 5 秒内受到的所有伤害翻倍（包 health.DoDelta，wdsn 同款策略）
 -- 贯通真伤：攻击固定造成 100 + 1% 目标最大生命值伤害（DoHHDelta 官方真伤通道，
 --           无视护甲/减伤/免伤；命中才触发=天然无视闪避；格挡不减免）
--- 固定吸血：1 + 10% 自身已损失生命，走 health:SetVal 直通（绕过一切封疗/减疗钩子）
--- 免死：受致命伤害时消耗全部宝珠，锁血 50% 并无敌+不可选中 5 秒，冷却 240 秒
+-- 固定吸血：1% 自身最大生命，走 health:SetVal 直通（绕过一切封疗/减疗钩子）
 -- 宝珠视觉：网络化 campfirefire FX 实体（去除 heater/firefx，熄灭灯光与音效），
 --           服务端驱动环绕位置，Transform 自动复制到客户端
 
@@ -29,11 +28,7 @@ local ORB_AOE_DMG      = 10    -- 每宝珠每次光环伤害
 local SOULFLAME_TIME   = 5     -- 灵魂烈焰持续（秒）
 local TRUE_BASE        = 100   -- 贯通真伤固定值
 local TRUE_MAXHP_PCT   = 0.01  -- 贯通真伤 +1% 目标最大生命
-local LIFESTEAL_BASE   = 1     -- 固定吸血
-local LIFESTEAL_LOST   = 0.10  -- +10% 自身已损失生命
-local LOCK_PCT         = 0.5   -- 免死锁血线（50%）
-local LOCK_TIME        = 5     -- 免死无敌时长（秒）
-local LOCK_CD          = 240   -- 免死冷却（秒）
+local LIFESTEAL_MAXHP_PCT = 0.01 -- 吸血 = 1% 自身最大生命
 
 -- =========================================================
 -- 工具
@@ -181,7 +176,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "安燃",
         client_text = "安燃",
-        desc = "每次攻击生成2个火焰宝珠环绕自身（上限8）\n每宝珠+10%攻速，光环每2秒造成10点/珠真伤，受击反击\n命中目标附加灵魂烈焰：5秒内受到的所有伤害翻倍\n攻击固定造成" .. TRUE_BASE .. "+1%目标最大生命贯通真伤\n吸血" .. LIFESTEAL_BASE .. "+10%已损失生命（无视禁疗）\n致命伤消耗全部宝珠：锁血50%无敌5秒（冷却240秒）",
+        desc = "每次攻击生成2个火焰宝珠环绕自身（上限8）\n每宝珠+10%攻速，光环每2秒造成10点/珠真伤，受击反击\n命中目标附加灵魂烈焰：5秒内受到的所有伤害翻倍\n攻击固定造成" .. TRUE_BASE .. "+1%目标最大生命贯通真伤\n吸血1%自身最大生命",
         can_add = false,
         only_one = true,
         is_special = false,
@@ -243,11 +238,10 @@ AddPrefabPostInit("world", function(inst)
                             health:DoDelta(-true_dmg, false, "anran_true")
                         end
                     end
-                    -- 固定吸血：1 + 10% 自身已损失生命（SetVal 直通，无视禁疗）
+                    -- 吸血：1% 自身最大生命（SetVal 直通，无视禁疗）
                     local myhealth = owner.components.health
                     if myhealth then
-                        local lost = (myhealth.maxhealth or 0) - (myhealth.currenthealth or 0)
-                        ForceHeal(owner, LIFESTEAL_BASE + math.max(0, lost) * LIFESTEAL_LOST)
+                        ForceHeal(owner, (myhealth.maxhealth or 0) * LIFESTEAL_MAXHP_PCT)
                     end
                 end
                 owner:ListenForEvent("onattackother", owner._anran_attack_handler)
@@ -270,52 +264,6 @@ AddPrefabPostInit("world", function(inst)
                     end
                 end
                 owner:ListenForEvent("attacked", owner._anran_attacked_handler)
-
-                -- 免死锁血：致命伤时消耗全部宝珠 → 锁血 50% + 无敌不可选中 5 秒
-                if not owner._anran_lock_hooked then
-                    owner._anran_lock_hooked = true
-                    local old_delta = owner.components.health.DoDelta
-                    owner._anran_old_health_delta = old_delta
-                    owner.components.health.DoDelta = function(self, delta, overtime, cause, ...)
-                        if delta < 0 and not self:IsDead()
-                                and (self.currenthealth or 0) + delta <= 0
-                                and _G.Moon_HasEffect(owner, EFFECT_KEY)
-                                and (owner._anran_orb_count or 0) > 0
-                                and _G.GetTime() >= (owner._anran_lock_cd or 0) then
-                            owner._anran_lock_cd = _G.GetTime() + LOCK_CD
-                            ClearOrbs(owner)
-                            local lockval = math.floor((self.maxhealth or 100) * LOCK_PCT)
-                            delta = -(self.currenthealth - lockval)
-                            -- 无敌 + 不可选中 5 秒
-                            self:SetInvincible(true)
-                            owner:AddTag("notarget")
-                            owner:DoTaskInTime(LOCK_TIME, function(inst)
-                                if inst:IsValid() and inst.components.health then
-                                    inst.components.health:SetInvincible(false)
-                                    if inst:HasTag("notarget") then
-                                        inst:RemoveTag("notarget")
-                                    end
-                                end
-                            end)
-                            -- 火焰爆发特效
-                            local x, y, z = owner.Transform:GetWorldPosition()
-                            for i = 1, 6 do
-                                local fx = _G.SpawnPrefab("campfirefire")
-                                if fx then
-                                    fx:RemoveComponent("heater")
-                                    fx:RemoveComponent("firefx")
-                                    if fx.Light then fx.Light:Enable(false) end
-                                    fx.persists = false
-                                    local ang = i * _G.PI / 3
-                                    fx.Transform:SetPosition(
-                                        x + 2 * math.cos(ang), y + 0.5, z + 2 * math.sin(ang))
-                                    fx:DoTaskInTime(1, function(f) if f:IsValid() then f:Remove() end end)
-                                end
-                            end
-                        end
-                        return old_delta(self, delta, overtime, cause, ...)
-                    end
-                end
 
                 -- 死亡/移除时清理宝珠
                 owner:ListenForEvent("death", function(inst)
@@ -347,13 +295,6 @@ AddPrefabPostInit("world", function(inst)
                     owner:RemoveEventCallback("attacked", owner._anran_attacked_handler)
                     owner._anran_attacked_handler = nil
                 end
-                -- 免死无敌还原（若正处于无敌期）
-                if owner.components.health and owner.components.health:IsInvincible()
-                        and owner._anran_lock_hooked then
-                    owner.components.health:SetInvincible(false)
-                    if owner:HasTag("notarget") then owner:RemoveTag("notarget") end
-                end
-                -- 免死 DoDelta 包装保留（wdsn 同款不解包策略，靠 Moon_HasEffect 短路）
                 owner._anran_inited = nil
                 owner._anran_applied_atkspd = nil
             end
