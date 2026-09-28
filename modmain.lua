@@ -91,10 +91,12 @@ modimport("scripts/enchants/mx_health")
 modimport("scripts/enchants/fqcd_sanity")
 modimport("scripts/enchants/myxl_level")
 modimport("scripts/enchants/yzdx")
+modimport("scripts/enchants/wuyang")    -- 无漾：雨露驱动生存（伤害抵扣+护盾水爆）
 modimport("scripts/enchants/wywq")
 modimport("scripts/enchants/jdd")
 modimport("scripts/enchants/lanqiu")
 modimport("scripts/enchants/aiyo")
+modimport("scripts/enchants/anran")     -- 安燃：火焰宝珠+灵魂烈焰+贯通真伤+免死锁血
 modimport("scripts/enchants/fay")
 modimport("scripts/enchants/yzq")
 modimport("scripts/enchants/mgcy")
