@@ -110,7 +110,8 @@ end)
 -- 使用时长掉落：装备佩戴指定附魔满 N 秒 → 掉落一枚该附魔石
 -- mode="continuous"：按物品连续佩戴计时，仅在"被佩戴"时计时；
 --                    摘下即取消并清零（摘掉就重新计数）；计满清零可循环获取
--- mode="total"：佩戴期间累计总时长（跨摘戴累计、随玩家存档保存），
+-- mode="total"：玩家挂机（站立不动2秒即算挂机，无需佩戴附魔；
+--               佩戴无欲无求入禅定同样计入）累计总时长，随玩家存档保存，
 --               计满后单人单档（按 userid）仅可获取一次
 -- =========================================================
 local USE_TIME_DROPS = {
@@ -122,7 +123,7 @@ local USE_TIME_DROPS = {
     ["Legend_WYWQ"] = {
         time = 1200, name = "无欲无求", mode = "total",
         msg = "心如止水，宠辱不惊…",
-    }, -- 挂机（禅定）累计满 1200 秒（游戏内20分钟），单人单档一次
+    }, -- 挂机（站立不动2秒即算挂机，无需佩戴）累计满 1200 秒（游戏内20分钟），单人单档一次
 }
 
 -- 检查物品是否带有指定附魔（HH equip_buff_list: {name=附魔id, value=数值}）
@@ -189,26 +190,71 @@ AddPlayerPostInit(function(player)
         end, 1)
     end
 
-    -- total：玩家级计时，每秒仅在处于无欲无求禅定（挂机）状态时 +1
+    -- 独立挂机检测：站立不动 2 秒即算挂机（与 wywq.lua 禅定判定同一套标准）
+    -- 不佩戴附魔也能累计挂机时长；佩戴附魔入禅定时两者同时为真，统一计数
+    local function startIdleDetector()
+        if player._moon_idle_task then return end
+        player._moon_idle_meditating = false
+        player._moon_idle_time = 0
+        player._moon_idle_last_pos = nil
+        player._moon_idle_task = player:DoPeriodicTask(1, function()
+            if not player:IsValid() then return end
+            local x, y, z = player.Transform:GetWorldPosition()
+            local moving = false
+            if player._moon_idle_last_pos then
+                local dx = x - player._moon_idle_last_pos[1]
+                local dz = z - player._moon_idle_last_pos[3]
+                if dx * dx + dz * dz > 0.01 then
+                    moving = true
+                end
+            end
+            local busy = false
+            if player.sg then
+                if player.sg:HasStateTag("busy") or player.sg:HasStateTag("attacking") or
+                   player.sg:HasStateTag("working") or player.sg:HasStateTag("channeling") then
+                    busy = true
+                end
+            end
+            if player.components.combat and player.components.combat.target then
+                busy = true
+            end
+            if moving or busy then
+                player._moon_idle_meditating = false
+                player._moon_idle_time = 0
+            else
+                player._moon_idle_time = player._moon_idle_time + 1
+                if player._moon_idle_time >= 2 then
+                    player._moon_idle_meditating = true
+                end
+            end
+            player._moon_idle_last_pos = { x, y, z }
+        end, 1)
+    end
+
+    -- total：玩家级计时，每秒仅在挂机（裸挂机空闲 或 佩戴附魔禅定）时 +1
+    -- 进场即启动，无需佩戴附魔；计满发石后停表
     local function startTotalTimer(enchant_id)
-        if player._moon_usedrop_total_task then return end
+        player._moon_usedrop_total_tasks = player._moon_usedrop_total_tasks or {}
+        if player._moon_usedrop_total_tasks[enchant_id] then return end
         player._moon_usedrop_total = player._moon_usedrop_total or {}
-        player._moon_usedrop_total_task = player:DoPeriodicTask(1, function()
+        player._moon_usedrop_total_tasks[enchant_id] = player:DoPeriodicTask(1, function()
             if not player:IsValid() then
-                if player._moon_usedrop_total_task then
-                    player._moon_usedrop_total_task:Cancel()
-                    player._moon_usedrop_total_task = nil
+                if player._moon_usedrop_total_tasks then
+                    local t = player._moon_usedrop_total_tasks[enchant_id]
+                    if t then t:Cancel() end
+                    player._moon_usedrop_total_tasks[enchant_id] = nil
                 end
                 return
             end
-            if not player._wywq_meditating then return end -- 仅禅定挂机时计时
+            if not (player._moon_idle_meditating or player._wywq_meditating) then return end
             player._moon_usedrop_total[enchant_id] = (player._moon_usedrop_total[enchant_id] or 0) + 1
             local cfg = USE_TIME_DROPS[enchant_id]
             if cfg and player._moon_usedrop_total[enchant_id] >= cfg.time then
                 player._moon_usedrop_total[enchant_id] = 0
-                if player._moon_usedrop_total_task then
-                    player._moon_usedrop_total_task:Cancel()
-                    player._moon_usedrop_total_task = nil
+                if player._moon_usedrop_total_tasks then
+                    local t = player._moon_usedrop_total_tasks[enchant_id]
+                    if t then t:Cancel() end
+                    player._moon_usedrop_total_tasks[enchant_id] = nil
                 end
                 if not HasObtainedOnce(enchant_id, player) then
                     MarkObtainedOnce(enchant_id, player)
@@ -218,49 +264,37 @@ AddPlayerPostInit(function(player)
         end, 1)
     end
 
-    -- 佩戴：物品带有计掉附魔时按模式启动计时
+    -- 前置：附魔功能开启才启动挂机计时
+    if GLOBAL.MOON_CFG and GLOBAL.MOON_CFG.ENABLE_MORE_ENCHANTS
+        and not (_G.Moon_IsHHEnabled and not _G.Moon_IsHHEnabled()) then
+        startIdleDetector()
+        for id, cfg in pairs(USE_TIME_DROPS) do
+            if cfg.mode == "total" and not HasObtainedOnce(id, player) then
+                startTotalTimer(id)
+            end
+        end
+    end
+
+    -- 佩戴：物品带有计掉附魔时启动 continuous 计时（total 已在进场时启动，无需佩戴）
     player:ListenForEvent("equip", function(owner, data)
         local item = data and data.item
         if not item or not item:IsValid() then return end
         for id, cfg in pairs(USE_TIME_DROPS) do
-            if ItemHasEnchant(item, id) then
-                if cfg.mode == "total" then
-                    -- 已获取过则不再计时
-                    if not HasObtainedOnce(id, player) then
-                        startTotalTimer(id)
-                    end
-                else
-                    startContinuousTimer(item, id)
-                end
+            if cfg.mode == "continuous" and ItemHasEnchant(item, id) then
+                startContinuousTimer(item, id)
             end
         end
     end)
 
-    -- 摘下：continuous 取消并清零（摘掉就重新计数）；total 停止计时但保留累计值
+    -- 摘下：continuous 取消并清零（摘掉就重新计数）；total 不受摘戴影响，持续累计
     player:ListenForEvent("unequip", function(_, data)
         local item = data and data.item
-        if item then
-            if item._moon_usedrop_tasks then
-                for _, task in pairs(item._moon_usedrop_tasks) do
-                    task:Cancel()
-                end
-                item._moon_usedrop_tasks = nil
+        if item and item._moon_usedrop_tasks then
+            for _, task in pairs(item._moon_usedrop_tasks) do
+                task:Cancel()
             end
+            item._moon_usedrop_tasks = nil
             item._moon_usedrop_time = nil
-        end
-        -- 仅当摘下的是带 total 附魔的物品时才停玩家计时
-        if player._moon_usedrop_total_task then
-            local has_total = false
-            for id, cfg in pairs(USE_TIME_DROPS) do
-                if cfg.mode == "total" and item and ItemHasEnchant(item, id) then
-                    has_total = true
-                    break
-                end
-            end
-            if has_total or not item then
-                player._moon_usedrop_total_task:Cancel()
-                player._moon_usedrop_total_task = nil
-            end
         end
     end)
 
