@@ -1,6 +1,6 @@
 -- 小月亮 附魔：安燃
--- 每次攻击生成 2 个火焰宝珠环绕自身（上限 8），每宝珠 +10% 攻速（HH atk_speed）
--- 火焰光环：每 2 秒对周围敌人造成 10 点/珠真伤；受击时宝珠齐射反击攻击者
+-- 每次攻击生成 2 个火焰宝珠环绕自身（上限 8），每宝珠 +5% 攻速（HH atk_speed）
+-- 火焰光环：每 2 秒对周围敌人造成 5 点/珠真伤；受击时宝珠齐射反击攻击者
 -- 灵魂烈焰：被命中目标 5 秒内受到的所有伤害翻倍（包 health.DoDelta，wdsn 同款策略）
 -- 贯通真伤：攻击固定造成 100 + 1% 目标最大生命值伤害（DoHHDelta 官方真伤通道，
 --           无视护甲/减伤/免伤；命中才触发=天然无视闪避；格挡不减免）
@@ -18,13 +18,13 @@ local EFFECT_KEY = "anran"
 
 local ORBS_PER_ATTACK = 2      -- 每次攻击生成宝珠数
 local ORB_MAX          = 8     -- 宝珠上限
-local ORB_ATK_SPEED    = 10    -- 每宝珠攻速加成（%）
+local ORB_ATK_SPEED    = 5     -- 每宝珠攻速加成（%）
 local ORB_RADIUS       = 1.7   -- 环绕半径
 local ORB_HEIGHT       = 1.2   -- 环绕高度
 local ORB_ORBIT_SPEED  = 1.6   -- 环绕角速度（弧度/秒）
 local AOE_PERIOD       = 2     -- 光环自动攻击间隔（秒）
 local AOE_RADIUS       = 6     -- 光环攻击范围
-local ORB_AOE_DMG      = 10    -- 每宝珠每次光环伤害
+local ORB_AOE_DMG      = 5     -- 每宝珠每次光环伤害
 local SOULFLAME_TIME   = 5     -- 灵魂烈焰持续（秒）
 local TRUE_BASE        = 100   -- 贯通真伤固定值
 local TRUE_MAXHP_PCT   = 0.01  -- 贯通真伤 +1% 目标最大生命
@@ -176,7 +176,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "安燃",
         client_text = "安燃",
-        desc = "每次攻击生成2个火焰宝珠环绕自身（上限8）\n每宝珠+10%攻速，光环每2秒造成10点/珠真伤，受击反击\n命中目标附加灵魂烈焰：5秒内受到的所有伤害翻倍\n攻击固定造成" .. TRUE_BASE .. "+1%目标最大生命贯通真伤\n吸血1%自身最大生命",
+        desc = "每次攻击生成2个火焰宝珠环绕自身（上限8）\n每宝珠+5%攻速，光环每2秒造成5点/珠真伤，受击反击\n命中目标附加灵魂烈焰：5秒内受到的所有伤害翻倍\n攻击固定造成" .. TRUE_BASE .. "+1%目标最大生命贯通真伤\n吸血1%自身最大生命",
         can_add = false,
         only_one = true,
         is_special = false,

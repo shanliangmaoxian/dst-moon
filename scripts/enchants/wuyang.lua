@@ -1,7 +1,7 @@
 -- 小月亮 附魔：无漾
 -- 雨露（原版潮湿）驱动：
---   快速回满雨露值（+10/秒）；不受潮湿影响（Wurt 同款：免扣san + 免手滑）
---   受到的所有伤害优先消耗雨露值抵扣；每 1 点雨露值 = 1% 移速（上限100）
+--   快速回满雨露值（+3/秒）；不受潮湿影响（Wurt 同款：免扣san + 免手滑）
+--   受到的所有伤害优先消耗雨露值抵扣；每 1 点雨露值 = 1% 移速（上限30）
 --   每 3 秒恢复 5 点三维
 --   雨露值归 0（从有到无）时生成 最大生命×10 护盾（约 20 秒快速衰减完）
 --   护盾耗尽触发水爆：范围真伤+击退+灭火+溅湿（参考帝王蟹水浪风格），冷却 240 秒
@@ -14,8 +14,9 @@ if not CFG.ENABLE_MORE_ENCHANTS then return end
 local EFFECT_ID = "Legend_WUYANG"
 local EFFECT_KEY = "wuyang"
 
-local DEW_REGEN       = 10    -- 雨露回复速度（点/秒，空→满约10秒）
+local DEW_REGEN       = 3     -- 雨露回复速度（点/秒，空→满约33秒）
 local DEW_SPEED_PCT   = 1     -- 每 1 点雨露 = 1% 移速
+local DEW_SPEED_CAP   = 30    -- 移速加成上限（%）
 local REGEN_PERIOD    = 3     -- 三维回复间隔（秒）
 local REGEN_AMOUNT    = 5     -- 三维回复量
 local SHIELD_MAXHP_X  = 10    -- 护盾量 = 最大生命 × 10
@@ -34,7 +35,7 @@ local BURST_CD        = 240   -- 水爆冷却（秒）
 local function ApplyMoveSpeed(owner, dew)
     local loc = owner.components.locomotor
     if not loc then return end
-    local pct = math.floor(dew) * DEW_SPEED_PCT
+    local pct = math.min(math.floor(dew) * DEW_SPEED_PCT, DEW_SPEED_CAP)
     if pct > 0 then
         loc:SetExternalSpeedMultiplier(owner, "wuyang_speed", 1 + pct / 100)
     else
@@ -137,7 +138,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "无漾",
         client_text = "无漾",
-        desc = "快速回满雨露值（+10/秒），不受潮湿影响\n受到的所有伤害优先消耗雨露值抵扣\n每1点雨露值+1%移速（最高100%）\n每3秒恢复5点三维\n雨露值归0时生成最大生命×10护盾（约20秒衰减完）\n护盾耗尽触发水爆（冷却240秒）",
+        desc = "快速回满雨露值（+3/秒），不受潮湿影响\n受到的所有伤害优先消耗雨露值抵扣\n每1点雨露值+1%移速（最高30%）\n每3秒恢复5点三维\n雨露值归0时生成最大生命×10护盾（约20秒衰减完）\n护盾耗尽触发水爆（冷却240秒）",
         can_add = false,
         only_one = true,
         is_special = false,
