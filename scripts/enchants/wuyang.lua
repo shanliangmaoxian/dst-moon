@@ -26,20 +26,26 @@ local BURST_KNOCKBACK = 10    -- 水爆击退初速
 local BURST_CD        = 240   -- 水爆冷却（秒）
 
 -- =========================================================
--- HH 词条差额重算（ji.lua SetHHValue 同款）
+-- 移速：每 1 点雨露 = 1%（locomotor 外部倍率）
+-- 注意：不能走 HH 的 addSpeedPercent 词条——HH 只在 equip 事件时读取一次
+-- （hh_player.lua handle_equip_to_player），之后不刷新，动态变化无效。
+-- 这里直接同步 locomotor 外部倍率（与 HH 内部实现同款，键名独立不冲突）。
 -- =========================================================
-local function SetHHValue(owner, key, newval, applied_field)
-    local hh = owner.components.hh_player
-    if not hh then return end
-    local old = owner[applied_field] or 0
-    if old == newval then return end
-    if old > 0 then
-        hh:ReduceEffectValueByKey(key, old)
+local function ApplyMoveSpeed(owner, dew)
+    local loc = owner.components.locomotor
+    if not loc then return end
+    local pct = math.floor(dew) * DEW_SPEED_PCT
+    if pct > 0 then
+        loc:SetExternalSpeedMultiplier(owner, "wuyang_speed", 1 + pct / 100)
+    else
+        loc:RemoveExternalSpeedMultiplier(owner, "wuyang_speed")
     end
-    if newval > 0 then
-        hh:AddEffectValueByKey(key, newval)
+end
+
+local function ClearMoveSpeed(owner)
+    if owner.components.locomotor then
+        owner.components.locomotor:RemoveExternalSpeedMultiplier(owner, "wuyang_speed")
     end
-    owner[applied_field] = newval
 end
 
 -- =========================================================
@@ -206,8 +212,7 @@ AddPrefabPostInit("world", function(inst)
                             moist:DoDelta(DEW_REGEN, true)
                         end
                         -- 移速：每 1 点雨露 = 1%
-                        SetHHValue(owner, "addSpeedPercent",
-                            math.floor(moist:GetMoisture()) * DEW_SPEED_PCT, "_wuyang_applied_spd")
+                        ApplyMoveSpeed(owner, moist:GetMoisture())
                         -- 归零沿标记复位
                         if moist:GetMoisture() > 0 then
                             owner._wuyang_dew_was_zero = false
@@ -247,8 +252,8 @@ AddPrefabPostInit("world", function(inst)
         un_equip_fn = function(inst, owner, value)
             _G.Moon_ReduceEffect(owner, EFFECT_KEY, EFFECT_ID, 1)
             if not _G.Moon_HasEffect(owner, EFFECT_KEY) then
-                -- 移速词条清零
-                SetHHValue(owner, "addSpeedPercent", 0, "_wuyang_applied_spd")
+                -- 移速倍率还原
+                ClearMoveSpeed(owner)
                 -- 潮湿免役还原
                 if owner.components.sanity then
                     owner.components.sanity.no_moisture_penalty = owner._wuyang_old_nmp or false

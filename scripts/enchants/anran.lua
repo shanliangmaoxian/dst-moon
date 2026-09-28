@@ -73,39 +73,58 @@ local function SyncOrbEntities(owner)
     end
     while #orbs < want do
         local orb = CreateOrbEntity(owner)
-        if orb then table.insert(orbs, orb) else break end
+        if orb then
+            -- 初始位置放在主人环上（天环同款），避免从世界原点飞入
+            local x, y, z = owner.Transform:GetWorldPosition()
+            local ang = #orbs * (2 * _G.PI / math.max(want, 1))
+            orb.Transform:SetPosition(
+                x + ORB_RADIUS * math.cos(ang), y + ORB_HEIGHT, z + ORB_RADIUS * math.sin(ang))
+            table.insert(orbs, orb)
+        else
+            break
+        end
     end
     owner._anran_orbs = orbs
 end
 
---宝珠环绕运动（服务端驱动，Transform 网络复制）
+--宝珠环绕运动（天环同款：updatelooper 每帧驱动 + 插值平滑跟随，服务端驱动 Transform 网络复制）
 local function StartOrbitTask(owner)
-    if owner._anran_orbit_task then return end
-    owner._anran_orbit_task = owner:DoPeriodicTask(0.1, function()
+    if owner._anran_orbit_fn then return end
+    if not owner.components.updatelooper then
+        owner:AddComponent("updatelooper")
+    end
+    local phase = 0
+    owner._anran_orbit_fn = function(inst, dt)
         if not owner:IsValid() then return end
         local orbs = owner._anran_orbs
         if orbs == nil or #orbs == 0 then return end
+        phase = phase + dt * ORB_ORBIT_SPEED
         local x, y, z = owner.Transform:GetWorldPosition()
         local n = #orbs
-        local t = _G.GetTime() * ORB_ORBIT_SPEED
+        local smooth = math.min(1, dt * 12) -- 每帧向目标位置插值（天环 delay_factor 同思路）
+        local tnow = _G.GetTime()
         for i, orb in ipairs(orbs) do
             if orb:IsValid() then
-                local ang = t + (i - 1) * (2 * _G.PI / n)
-                local bob = math.sin(_G.GetTime() * 3 + i) * 0.15
+                local ang = phase + (i - 1) * (2 * _G.PI / n)
+                local tx = x + ORB_RADIUS * math.cos(ang)
+                local ty = y + ORB_HEIGHT + math.sin(tnow * 3 + i) * 0.15
+                local tz = z + ORB_RADIUS * math.sin(ang)
+                local cx, cy, cz = orb.Transform:GetWorldPosition()
                 orb.Transform:SetPosition(
-                    x + ORB_RADIUS * math.cos(ang),
-                    y + ORB_HEIGHT + bob,
-                    z + ORB_RADIUS * math.sin(ang))
+                    cx + (tx - cx) * smooth,
+                    cy + (ty - cy) * smooth,
+                    cz + (tz - cz) * smooth)
             end
         end
-    end, 0.1)
+    end
+    owner.components.updatelooper:AddOnUpdateFn(owner._anran_orbit_fn)
 end
 
 local function StopOrbitTask(owner)
-    if owner._anran_orbit_task then
-        owner._anran_orbit_task:Cancel()
-        owner._anran_orbit_task = nil
+    if owner._anran_orbit_fn and owner.components.updatelooper then
+        owner.components.updatelooper:RemoveOnUpdateFn(owner._anran_orbit_fn)
     end
+    owner._anran_orbit_fn = nil
 end
 
 --清除全部宝珠（免死消耗/卸下）
