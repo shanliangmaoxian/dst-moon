@@ -3,6 +3,7 @@ local M = { EFFECT_ID = "Moon_YINGYU_XINGHUI" }
 local replacements = {}
 
 function M.HasEffect(inst)
+    if inst == nil then return false end
     local hh = inst.components and inst.components.hh_equip
     return inst.prefab == "ccs_starstaff" and hh ~= nil
         and hh:HasEffectByName(M.EFFECT_ID) or false

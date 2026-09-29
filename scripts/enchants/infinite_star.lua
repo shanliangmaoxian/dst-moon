@@ -14,6 +14,24 @@ local EFFECT_ID = "Legend_infinite_star"
 local EFFECT_NAME = "infinite_star"
 local CRAFT_MAGIC_COST = 160
 
+local function GetSakuraMagic(builder)
+    if builder == nil or builder.prefab ~= "ccs" then return nil end
+    local magic = builder.components ~= nil and builder.components.ccs_magic or nil
+    if magic ~= nil and type(magic.current) == "number" then
+        return magic.current
+    end
+
+    -- 制作栏在客户端刷新时可能只有 replica；这里不直接读 components，避免配方列表报错消失。
+    local replica = builder.replica ~= nil and builder.replica.ccs_magic or nil
+    if replica ~= nil then
+        if type(replica.GetMagic) == "function" then return replica:GetMagic() end
+        if replica.current ~= nil and type(replica.current.value) == "function" then
+            return replica.current:value()
+        end
+    end
+    return nil
+end
+
 -- =========================================================
 -- 无限魔力：消耗入口拦截
 -- =========================================================
@@ -104,7 +122,7 @@ end)
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
     -- 检测小樱mod
-    if not _G.Moon_IsModEnabled("workshop-3043439883") then return end
+    if not _G.Moon_IsCCSEnabled() then return end
 
     _G.AddSpecialEquipEffect(EFFECT_ID, {
         name = "无限星力",
@@ -163,7 +181,7 @@ STRINGS.NAMES.LMOON_EFFECT_STONE_INFINITE_STAR = "无限星力附魔石"
 
 AddSimPostInit(function()
     if not _G.Moon_IsHHEnabled() then return end
-    if not _G.Moon_IsModEnabled("workshop-3043439883") then return end
+    if not _G.Moon_IsCCSEnabled() then return end
     if _G.AllRecipes[RECIPE_NAME] ~= nil then return end
     -- 注意：AddRecipe2 是 mod 环境注入的 modutil 函数，不在 GLOBAL 里，
     -- 必须裸写（GLOBAL.AddRecipe2 会触发 strict.lua "not declared"）
@@ -186,11 +204,11 @@ AddSimPostInit(function()
             -- 本体的材料检查用 math.ceil(current)，159.x 魔力也会判定通过，
             -- 这里按实际值卡住，避免"魔力不够也能炼"
             canbuild = function(recipe, builder)
-                local magic = builder.components.ccs_magic
-                if builder.prefab ~= "ccs" or magic == nil then
+                local current_magic = GetSakuraMagic(builder)
+                if current_magic == nil then
                     return false, "仅小樱可以炼成"
                 end
-                if magic.current < CRAFT_MAGIC_COST then
+                if current_magic < CRAFT_MAGIC_COST then
                     return false, "魔力不足"
                 end
                 return true

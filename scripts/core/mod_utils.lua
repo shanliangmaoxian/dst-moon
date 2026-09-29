@@ -9,6 +9,10 @@ function _G.Moon_IsModEnabled(id)
     return GLOBAL.KnownModIndex:IsModEnabledAny(id)
 end
 
+function _G.Moon_IsCCSEnabled()
+    return _G.Moon_IsModEnabled("workshop-3043439883")
+end
+
 -- 检测 HH 附魔框架是否启用
 function _G.Moon_IsHHEnabled()
     return _G.Moon_IsModEnabled("workshop-3096210166")

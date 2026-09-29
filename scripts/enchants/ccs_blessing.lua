@@ -11,7 +11,7 @@ if not CFG.ENABLE_MORE_ENCHANTS then return end
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
     -- 检测小樱mod
-    if not _G.Moon_IsModEnabled("workshop-3043439883") then return end
+    if not _G.Moon_IsCCSEnabled() then return end
 
     -- 可封印Boss列表(目标→对应卡牌)
     local SEAL_MAP = {

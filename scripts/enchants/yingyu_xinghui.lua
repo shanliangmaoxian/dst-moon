@@ -7,6 +7,24 @@ local EFFECT_ID = adapter.EFFECT_ID
 local PRODUCT = "lmoon_effect_stone_yingyu_xinghui"
 local registered = false
 
+local function GetSakuraMagic(builder)
+    if builder == nil or builder.prefab ~= "ccs" then return nil end
+    local magic = builder.components ~= nil and builder.components.ccs_magic or nil
+    if magic ~= nil and type(magic.current) == "number" then
+        return magic.current
+    end
+
+    -- 客户端制作栏可能只有 replica，不能假设 components 一定存在。
+    local replica = builder.replica ~= nil and builder.replica.ccs_magic or nil
+    if replica ~= nil then
+        if type(replica.GetMagic) == "function" then return replica:GetMagic() end
+        if replica.current ~= nil and type(replica.current.value) == "function" then
+            return replica.current:value()
+        end
+    end
+    return nil
+end
+
 local function RegisterEnchant()
     local register = G.rawget(G, "AddSpecialEquipEffect")
     local ingredients = G.rawget(G, "CHARACTER_INGREDIENT")
@@ -63,9 +81,9 @@ AddSimPostInit(function()
         atlas = "images/hh_icon/hh_items.xml",
         image = "hh_effect_stone.tex",
         canbuild = function(recipe, builder)
-            local magic = builder.components.ccs_magic
             -- 本体的材料检查会向上取整，此处避免224.x魔力也能制作。
-            return builder.prefab == "ccs" and magic ~= nil and magic.current >= 225
+            local current_magic = GetSakuraMagic(builder)
+            return current_magic ~= nil and current_magic >= 225
         end,
     }, { "CCS_TAB1" })
 end)

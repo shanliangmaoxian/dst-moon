@@ -254,6 +254,9 @@ end)
 AddComponentPostInit("hh_player", function(self)
     local original = self.AddEquipEffect
     self.AddEquipEffect = function(component, ...)
+        if component == nil then
+            return original(component, ...)
+        end
         local ui = component.ui_container
         local container = ui and ui.components.container
         local stone = container and container:GetItemInSlot(26)
