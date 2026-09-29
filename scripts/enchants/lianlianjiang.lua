@@ -1,5 +1,5 @@
 -- 小月亮 附魔：蔷薇偶像恋恋酱
--- 基础数值：暴击+13%，爆伤+14%，移速+52%
+-- 基础数值：暴击+13%，爆伤+45%，移速+20%
 -- 获取（v1简化版）：已附魔「无意识的恋恋」时掷骰子，roll 出 5 或 14 直接获得
 --   （fumo.txt 原案还要求消耗5个恋恋石+世界30天，v2 再补）
 -- 彩蛋：roll5/roll14 文本提示；获得成功时公屏公告
@@ -37,10 +37,8 @@ AddPlayerPostInit(function(inst)
         local success, stone = _G.pcall(_G.HHSpawnStoneById, EFFECT_ID)
         if success and stone and player.components.inventory then
             player.components.inventory:GiveItem(stone, nil, player:GetPosition())
-            -- 公屏公告
-            _G.pcall(function()
-                _G.TheNet:Announce("叮咚～蔷薇偶像恋恋酱闪亮登场！我要推一辈子的蔷薇偶像！")
-            end)
+            -- 公屏公告已移除：在 #roll 的 Networking_Say 派发栈内调 TheNet:Announce
+            -- 会把 Say 包载荷（消息/userid）混进公告包，客户端查公告图标表时崩溃
         end
     end)
 end)
@@ -54,7 +52,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "蔷薇偶像恋恋酱",
         client_text = "恋恋\n酱",
-        desc = "暴击+13%，爆伤+14%，移速+52%\n与「无意识的恋恋」联动效果开发中",
+        desc = "暴击+13%，爆伤+45%，移速+20%\n与「无意识的恋恋」联动效果开发中",
         check_desc = "有「无意识的恋恋」时掷骰子，roll出5或14获得\n我要推一辈子的蔷薇偶像！",
         can_add = false,
         only_one = true,
@@ -70,8 +68,8 @@ AddPrefabPostInit("world", function(inst)
                 local hh = owner.components.hh_player
                 if hh then
                     hh:AddEffectValueByKey("criticalHitRate", 13)
-                    hh:AddEffectValueByKey("criticalHitEffect", 14)
-                    hh:AddEffectValueByKey("addSpeedPercent", 52)
+                    hh:AddEffectValueByKey("criticalHitEffect", 45)
+                    hh:AddEffectValueByKey("addSpeedPercent", 20)
                 end
             end
         end,
@@ -81,8 +79,8 @@ AddPrefabPostInit("world", function(inst)
                 local hh = owner.components.hh_player
                 if hh then
                     hh:ReduceEffectValueByKey("criticalHitRate", 13)
-                    hh:ReduceEffectValueByKey("criticalHitEffect", 14)
-                    hh:ReduceEffectValueByKey("addSpeedPercent", 52)
+                    hh:ReduceEffectValueByKey("criticalHitEffect", 45)
+                    hh:ReduceEffectValueByKey("addSpeedPercent", 20)
                 end
                 owner._llj_inited = nil
             end

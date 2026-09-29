@@ -109,7 +109,9 @@ end)
 -- =========================================================
 -- 使用时长掉落：装备佩戴指定附魔满 N 秒 → 掉落一枚该附魔石
 -- mode="continuous"：按物品连续佩戴计时，仅在"被佩戴"时计时；
---                    摘下即取消并清零（摘掉就重新计数）；计满清零可循环获取
+--                    摘下即取消并清零（摘掉就重新计数）；计满清零可循环获取；
+--                    配置 once=true 时改为单人单档（按 userid）仅可获取一次，
+--                    已获取则不再计时发石
 -- mode="total"：玩家挂机（站立不动2秒即算挂机，无需佩戴附魔；
 --               佩戴无欲无求入禅定同样计入）累计总时长，随玩家存档保存，
 --               计满后单人单档（按 userid）仅可获取一次
@@ -117,9 +119,9 @@ end)
 local USE_TIME_DROPS = {
     -- 附魔id = { time = 需要秒数, name = 附魔名, mode = 计时模式, msg = 获取飘字 }
     ["Legend_YUFENFEN"] = {
-        time = 2400, name = "雨纷纷", mode = "continuous",
+        time = 2400, name = "雨纷纷", mode = "continuous", once = true,
         msg = "这把伞陪你走过了一场又一场雨…",
-    }, -- 同一把伞连续使用满 2400 秒（游戏内40分钟）
+    }, -- 同一把伞连续使用满 2400 秒（游戏内40分钟），单人单档仅一次
     ["Legend_WYWQ"] = {
         time = 1200, name = "无欲无求", mode = "total",
         msg = "心如止水，宠辱不惊…",
@@ -184,8 +186,19 @@ AddPlayerPostInit(function(player)
             it._moon_usedrop_time[enchant_id] = (it._moon_usedrop_time[enchant_id] or 0) + 1
             local cfg = USE_TIME_DROPS[enchant_id]
             if cfg and it._moon_usedrop_time[enchant_id] >= cfg.time then
-                it._moon_usedrop_time[enchant_id] = 0 -- 计满清零，继续佩戴可再次累计
-                GiveEnchantStone(player, enchant_id)
+                it._moon_usedrop_time[enchant_id] = 0
+                if cfg.once then
+                    -- 单人单档：发石后停表，不再累计
+                    if not HasObtainedOnce(enchant_id, player) then
+                        MarkObtainedOnce(enchant_id, player)
+                        GiveEnchantStone(player, enchant_id)
+                    end
+                    local task = it._moon_usedrop_tasks and it._moon_usedrop_tasks[enchant_id]
+                    if task then task:Cancel() end
+                    if it._moon_usedrop_tasks then it._moon_usedrop_tasks[enchant_id] = nil end
+                else
+                    GiveEnchantStone(player, enchant_id) -- 计满清零，继续佩戴可再次累计
+                end
             end
         end, 1)
     end
@@ -276,11 +289,12 @@ AddPlayerPostInit(function(player)
     end
 
     -- 佩戴：物品带有计掉附魔时启动 continuous 计时（total 已在进场时启动，无需佩戴）
+    -- once=true 的附魔已获取过则不再启动计时
     player:ListenForEvent("equip", function(owner, data)
         local item = data and data.item
         if not item or not item:IsValid() then return end
         for id, cfg in pairs(USE_TIME_DROPS) do
-            if cfg.mode == "continuous" and ItemHasEnchant(item, id) then
+            if cfg.mode == "continuous" and not (cfg.once and HasObtainedOnce(id, owner)) and ItemHasEnchant(item, id) then
                 startContinuousTimer(item, id)
             end
         end
