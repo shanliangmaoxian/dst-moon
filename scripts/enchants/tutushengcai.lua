@@ -13,7 +13,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_TTSC", {
         name = "兔兔生财",
         client_text = "兔兔\n生财",
-        desc = "吃东西 20% 拉一坨粑粑\n收获/采集 25% 几率多一份\n小动物不惊动, 兔人浣猫对你中立\n每5分钟自动产一个胡萝卜在背包\n幸运+3",
+        desc = "吃食物20%产粑粑；收获/采集25%多一份\n小动物不惊动，兔人浣猫中立；幸运+3\n每5分钟背包自动产1个胡萝卜",
         check_desc = "兔兔生财，好运滚滚来！",
         can_add = false,
         only_one = true,

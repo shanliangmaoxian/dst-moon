@@ -31,7 +31,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_XIAOHUDIE", {
         name = "小蝴蝶",
         client_text = "小蝴\n蝶",
-        desc = "限伤10%+免疫反伤+脱手\n免疫击飞+免疫中毒+免疫制裁\n套装「双飞伴生蝶」:与小阿飞齐穿\n濒死立即回满血2次(蝶的献祭/飞的守护)\n两次用尽触发蝶之泯灭的哀伤,套装失效90秒",
+        desc = "限伤10%+免疫反伤/击飞/中毒/制裁，脱手\n套装「双飞伴生蝶」：濒死回满血2次\n耗尽触发蝶之泯灭，套装失效90秒",
         check_desc = "小蝴蝶，飞啊飞啊飞～",
         can_add = false,
         only_one = true,

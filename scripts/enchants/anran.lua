@@ -176,7 +176,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "安燃",
         client_text = "安燃",
-        desc = "每次攻击生成2个火焰宝珠环绕自身（上限8）\n每宝珠+5%攻速，光环每2秒造成5点/珠真伤，受击反击\n命中目标附加灵魂烈焰：5秒内受到的所有伤害翻倍\n攻击固定造成" .. TRUE_BASE .. "+1%目标最大生命贯通真伤\n吸血1%自身最大生命",
+        desc = "每次攻击+2宝珠环绕（上限8），每珠+5%攻速\n光环2秒/跳5点/珠真伤，受击齐射，命中附带灵魂烈焰（5秒受伤翻倍）\n贯通真伤" .. TRUE_BASE .. "+1%目标最大生命；吸血1%自身最大生命",
         can_add = false,
         only_one = true,
         is_special = false,

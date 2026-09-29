@@ -167,7 +167,7 @@ AddPrefabPostInit("world", function(inst)
     _G.AddSpecialEquipEffect("Legend_YANGMAOKE", {
         name = "养猫客",
         client_text = "养猫\n客",
-        desc = "每60秒召浣猫(上限4)\n每只:攻速+12%,移速+15%\n浣猫牺牲挡刀(120s冷却)\n挡刀后2s无敌\n夜晚额外+15%移速",
+        desc = "每60秒召唤浣猫（上限4）：每只攻速+12%、移速+15%\n浣猫牺牲挡刀（120秒冷却），挡刀后2秒无敌\n夜晚移速+15%",
         check_desc = "与猫同居，岁月静好…",
         can_add = false,
         only_one = true,

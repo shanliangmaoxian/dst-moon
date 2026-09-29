@@ -23,7 +23,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_QIANYUE", {
         name = "千月野",
         client_text = "千\n月",
-        desc = "月野锋芒 — 伤害+12%，攻速+10%\n与「心平气和」齐穿触发套装：\n伤害+30%、攻速+30%\n击杀触发月爆(250%范围伤害,冷却3秒)",
+        desc = "伤害+12%、攻速+10%\n与「心平气和」齐穿：伤害+30%、攻速+30%\n击杀触发月爆（250%范围伤害，冷却3秒）",
         check_desc = "月野锋芒～",
         can_add = false,
         only_one = true,

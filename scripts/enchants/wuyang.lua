@@ -138,7 +138,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "无漾",
         client_text = "无漾",
-        desc = "快速回满雨露值（+3/秒），不受潮湿影响\n受到的所有伤害优先消耗雨露值抵扣\n每1点雨露值+1%移速（最高30%）\n每3秒恢复5点三维\n雨露值归0时生成最大生命×10护盾（约20秒衰减完）\n护盾耗尽触发水爆（冷却240秒）",
+        desc = "快速回满雨露（+3/秒），免潮湿影响；伤害优先扣雨露\n每1点雨露+1%移速（封顶30%）；每3秒回5点三维\n雨露归零获最大生命×10护盾，耗尽触发水爆（冷却240秒）",
         can_add = false,
         only_one = true,
         is_special = false,

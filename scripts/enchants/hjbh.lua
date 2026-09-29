@@ -59,7 +59,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "厚积薄发",
         client_text = "厚积\n薄发",
-        desc = "15秒未攻击后，每0.5秒存储一次当前攻击伤害（吃附魔与倍率加成），最多15次\n下次攻击时释放为范围真伤",
+        desc = "15秒未攻击开始蓄力（每0.5秒存一次伤害，最多15层）\n下次攻击释放为范围真伤",
         check_desc = "别急，我在蓄力呢。——by：清欢渡",
         can_add = false,
         only_one = true,

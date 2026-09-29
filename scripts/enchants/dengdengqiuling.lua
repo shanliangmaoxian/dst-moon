@@ -15,7 +15,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_DENGDENGQIULING", {
         name = "等等秋零",
         client_text = "等等\n秋零",
-        desc = "我是浅笑我怕谁！\n浅笑一怒:暴击率+30%,暴击效果+100%(暴击3倍)\n穿刺之刃:每次攻击附带50点真实伤害(无视防御)\n真伤可被破虚转换(每50点→+5%暴击率+10%暴击效果)",
+        desc = "我是浅笑我怕谁！\n暴击率+30%，暴击效果+100%\n攻击附带50点真伤，可破虚转换（50点→+5%暴率+10%爆伤）",
         check_desc = "我是浅笑我怕谁！",
         can_add = false,
         only_one = true,

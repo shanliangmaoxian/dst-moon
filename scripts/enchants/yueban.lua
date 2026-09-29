@@ -13,7 +13,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_YUEBAN", {
         name = "月半",
         client_text = "月\n半",
-        desc = "免疫击退/僵直\n攻击附带自身当前生命值5%额外伤害\n受击20%几率「肉弹冲击」:\n周围3码敌人150%伤害+减速30%持续3秒",
+        desc = "免疫击退/僵直；攻击附带自身当前生命5%额外伤害\n受击20%触发「肉弹冲击」：3码内150%伤害+减速30%（3秒）",
         check_desc = "吨位即是力量！",
         can_add = false,
         only_one = true,

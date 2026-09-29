@@ -74,7 +74,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HUFEI", {
         name = "蝴蝶的小阿飞",
         client_text = "蝶\n飞",
-        desc = "5只光翼蝴蝶护体,受击耗1只减免60%\n每6秒回1只;击杀回25血+15精神+2只\n每只蝴蝶+4%伤害,移速+20%\n套装「双飞伴生蝶」:与小蝴蝶齐穿\n濒死立即回满血2次(蝶的献祭/飞的守护)\n两次用尽触发蝶之泯灭的哀伤,套装失效90秒",
+        desc = "5只蝴蝶护体：受击耗1只减60%伤，每6秒回1只，击杀回25血\n每只蝴蝶+4%伤害\n套装「双飞伴生蝶」：濒死回满血2次，耗尽触发蝶之泯灭失效",
         check_desc = "蝶翼护体，攻守兼备！",
         can_add = false,
         only_one = true,

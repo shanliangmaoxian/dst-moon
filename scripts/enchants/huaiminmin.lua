@@ -50,7 +50,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_HUAIMINMIN", {
         name = "怀民民",
         client_text = "怀民\n民",
-        desc = "攻击+25%，攻击范围+25%\n镜华装备：攻击+50%，范围+50%\n伤害50%转为真伤\n夜晚攻击30%概率催眠目标",
+        desc = "攻击+25%，范围+25%；镜华装备效果翻倍且50%转真伤\n夜晚攻击30%概率催眠",
         check_desc = "你睡没睡？镜华：起来重睡！",
         can_add = false,
         only_one = true,

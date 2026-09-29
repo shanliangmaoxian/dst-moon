@@ -24,7 +24,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_XPING", {
         name = "心平气和",
         client_text = "心平\n气和",
-        desc = "佛系护体 — 减伤10%，每3秒回复1.5%生命\n与「千月野」齐穿触发套装：\n减伤25%、回复翻倍\n受击30%几率护盾(25%生命,冷却8秒)",
+        desc = "减伤10%，每3秒回1.5%生命\n与「千月野」齐穿：减伤25%、回复翻倍\n受击30%获得护盾（25%生命，冷却8秒）",
         check_desc = "佛系护体～",
         can_add = false,
         only_one = true,

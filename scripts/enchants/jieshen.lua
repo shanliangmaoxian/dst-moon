@@ -56,7 +56,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "孑身处处静",
         client_text = "孑身\n处静",
-        desc = "周围30码内无其他玩家时:\n免疫过冷过热,每5秒回复1-5生命与精神\n受击自动获得85％减伤+霸体(持续5秒/冷却60秒)\n免疫沙尘暴减速\n与「余灯照夜明」齐穿时,周围有玩家也照常生效",
+        desc = "周围30码无其他玩家时：免疫过冷过热/沙尘暴，每5秒回1-5血san\n受击获85%减伤+霸体5秒（冷却60秒）\n与「余灯照夜明」齐穿则组队也生效",
         check_desc = "空庭水月定，连山接无垠。",
         can_add = false,
         only_one = true,

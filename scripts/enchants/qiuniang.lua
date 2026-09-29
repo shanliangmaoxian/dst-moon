@@ -64,7 +64,7 @@ AddPrefabPostInit("world", function(inst)
         client_text = "建家\n穹酱",
         -- 百分号用全角：本附魔没有 value_range，HH 不会对 desc 做 string.format，
         -- 写半角 %% 会原样显示成两个百分号
-        desc = "免疫生物仇恨\n脱战99％免伤(主动攻击后失效,脱战5秒恢复)\n建造材料永久减半+快速动作\nsan值快速恢复,每日1份奇异甜食\n仅小穹可使用",
+        desc = "免疫仇恨；脱战99%免伤（主动攻击后失效）\n建造材料永久减半+快速动作，san快速恢复\n每日1份奇异甜食；仅小穹可用",
         check_desc = "穹酱！穹酱！",
         ui_from_desc = "小穹累计食用10份奇异甜食",
         obtain_desc = "小穹累计食用10份奇异甜食",

@@ -88,7 +88,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_MLTT", {
         name = "麻辣兔头",
         client_text = "麻辣\n兔头",
-        desc = "+15%移速，战斗中/被追击+22%移速\n血量<30%瞬移留假身(120s冷却)\n收获/采集3%多一份\n攻击1%触发822%暴击\n惊喜种子",
+        desc = "+15%移速，战斗中+22%；收获/采集3%多一份\n血量<30%瞬移留假身（120秒冷却）\n攻击1%触发822%暴击，偶得惊喜种子",
         check_desc = "big胆！再吃麻辣兔头辣你pp！",
         can_add = false,
         only_one = true,

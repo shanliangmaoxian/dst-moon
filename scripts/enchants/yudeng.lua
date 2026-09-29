@@ -123,7 +123,7 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect(EFFECT_ID, {
         name = "余灯照夜明",
         client_text = "余灯\n夜明",
-        desc = "周围50码内有其他玩家时:\n每5秒使自身与范围内玩家回复5-10生命与精神\n范围内每名玩家使攻击与防御+10％(上限6人)\n每5-10秒为自身与范围内玩家驱散一个负面效果\n与「孑身处处静」齐穿时,周围没有玩家也视作6人",
+        desc = "周围50码有玩家：每5秒群体回5-10血san并驱散负面\n每名玩家+10%攻防（上限6人）\n与「孑身处处静」齐穿则无人也视作6人",
         check_desc = "孑身处处静，余灯照夜明。",
         can_add = false,
         only_one = true,
