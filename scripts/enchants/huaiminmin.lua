@@ -20,8 +20,10 @@ local SLEEP_TIME       = 5     -- 催眠时长（秒）
 -- =========================================================
 AddComponentPostInit("combat", function(self)
     local _old_CalcDamage = self.CalcDamage
+    -- 注意：原版 CalcDamage 返回 (dmg, spdmg) 两个值，spdmg 是位面等特殊伤害表，
+    -- 必须完整透传，否则全游戏武器位面伤害丢失
     self.CalcDamage = function(self, target, weapon, ...)
-        local dmg = _old_CalcDamage(self, target, weapon, ...)
+        local dmg, spdmg = _old_CalcDamage(self, target, weapon, ...)
         local inst = self.inst
         if dmg
             and dmg > 0
@@ -35,7 +37,7 @@ AddComponentPostInit("combat", function(self)
             dmg = dmg - true_part
             inst._hmm_pending_true = true_part
         end
-        return dmg
+        return dmg, spdmg
     end
 end)
 
