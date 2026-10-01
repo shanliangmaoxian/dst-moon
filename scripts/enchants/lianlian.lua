@@ -33,6 +33,7 @@ end)
 -- Part 1: 骰子事件监听（记录 roll 出 5 和 14）
 -- =========================================================
 AddPlayerPostInit(function(inst)
+    if not CFG.ENABLE_SIMPLE_LOOT then return end
     if not _G.TheWorld.ismastersim then return end
     inst._lianlian_roll5 = false
     inst._lianlian_roll14 = false
@@ -60,6 +61,7 @@ _G.Networking_Say = function(guid, userid, name, prefab, message, colour, whispe
     if _G.TheWorld and _G.TheWorld.ismastersim
             and type(message) == "string"
             and (message == "哈德曼的妖怪少女" or message == "5.14")
+            and not CFG.ENABLE_SIMPLE_LOOT
     then
         local player = _G.UserToPlayer(userid)
         if player and player:IsValid() then

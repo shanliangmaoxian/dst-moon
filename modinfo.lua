@@ -721,4 +721,16 @@ configuration_options = {
         },
         default = 500,
     },
+    
+    AddTitle("掉落难度配置"),
+    {
+        name = "ENABLE_SIMPLE_LOOT",
+        label = "启用简单获取附魔",
+        hover = "-",
+        options = {
+            { description = "启用", data = true },
+            { description = "禁用", data = false },
+        },
+        default = true,
+    },
 }

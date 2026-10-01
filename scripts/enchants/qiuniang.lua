@@ -298,6 +298,7 @@ end)
 -- 独立于 HH 框架，与装备/附魔无关，纯玩家维度的计数
 -- =========================================================
 AddPlayerPostInit(function(inst)
+    if not CFG.ENABLE_SIMPLE_LOOT then return end
     if not _G.TheWorld or not _G.TheWorld.ismastersim then return end
     -- 附魔石由 HH 框架生成，HH 未启用时无需挂计数器
     if not _G.Moon_IsHHEnabled() then return end

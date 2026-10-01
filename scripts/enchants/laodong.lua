@@ -19,6 +19,7 @@ local CFG = GLOBAL.MOON_CFG
 local _ldg_potato_counter = {}
 
 AddPrefabPostInitAny(function(inst2)
+    if not CFG.ENABLE_SIMPLE_LOOT then return end
     if not _G.TheWorld.ismastersim then return end
     if not inst2:HasTag("player") then return end
 
@@ -88,11 +89,13 @@ end)
 AddPrefabPostInit("world", function(inst)
     if not _G.Moon_IsHHEnabled() then return end
 
+    local desc = CFG.ENABLE_SIMPLE_LOOT and "吃烤土豆获得（135保底），劳动最光荣！" or ""
+
     GLOBAL.AddSpecialEquipEffect("Legend_LDG", {
         name = "劳动最光荣",
         client_text = "劳动\n光荣",
         desc = "劳动最光荣！\n秒采/秒砍挖/秒制作/秒出锅全加速\n劳动中5%概率获得藏宝图",
-        check_desc = "吃烤土豆获得（135保底），劳动最光荣！",
+        check_desc = desc,
         can_add = false,
         only_one = true,
         is_special = false,
