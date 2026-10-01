@@ -27,23 +27,22 @@ function is_hh_type(data, hh_type)
     return false
 end
 
-function get_player_data_by_key(player, item_key)
-    if not (player.components and player.components.hh_data) and
-        is_hh_type(item_key, "string") then return 0 end
-    return tonumber(player.components.hh_data:GetParamsValue(item_key)) or 0
+local function get_player_data_by_key(player, item_key)
+    local cp_data = player.components and player.components.hh_data
+    if not cp_data then return 0 end
+    return tonumber(cp_data:GetParamsValue(item_key)) or 0
 end
 
-function dodelta_player_data_by_key(player, item_key, value)
-    if not (player.components and player.components.hh_data) and
-        is_hh_type(item_key, "string") then return 0 end
-    player.components.hh_data:DoDeltaParamValue(item_key, value)
+local function dodelta_player_data_by_key(player, item_key, value)
+    local cp_data = player and player.components.hh_data
+    if not cp_data then return end
+    cp_data:DoDeltaParamValue(item_key, value)
 end
 
-function add_log(log_type, log_msg)
-    if not (TheWorld.components and TheWorld.components.hh_world_log) then
-        return
-    end
-    TheWorld.components.hh_world_log:AddLog(log_type, log_msg)
+local function add_log(log_type, log_msg)
+    local cp_world_log = TheWorld and TheWorld.components.hh_world_log
+    if not cp_world_log then return end
+    cp_world_log:AddLog(log_type, log_msg)
 end
 
 function template(template, data)
@@ -283,7 +282,6 @@ local function transform_stones_inplace(inst, target, pos, caster, transformer)
         })
 
         if stone_entities and #stone_entities > 0 then
-            local common_pool = HHGetComEquipEffect()
             for i, stone in ipairs(stone_entities) do
                 if stone and stone.prefab == "hh_effect_stone" then
                     if stone.hh_effect then
@@ -368,9 +366,12 @@ AddPrefabPostInit("hh_staff_dis", function(inst)
     if not inst.components or not inst.components.spellcaster then return end
     if not inst.components or not inst.components.container then return end
 
+    inst.__lmoon_effect_aether_handle_map = handle_map
+
     local old_spell_fn = inst.components.spellcaster.spell
     inst.components.spellcaster:SetSpellFn(
         function(inst, target, pos, doer)
+            local handle_map = inst.__lmoon_effect_aether_handle_map
             if not inst.components or not inst.components.container then
                 return old_spell_fn(inst, target, pos, doer)
             end
