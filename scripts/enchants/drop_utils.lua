@@ -54,6 +54,7 @@ end
 AddPrefabPostInitAny(function(inst)
     if not GLOBAL.TheWorld.ismastersim then return end
     if not inst:HasTag("epic") then return end
+    if not GLOBAL.MOON_CFG.ENABLE_SIMPLE_LOOT then return end
     inst:ListenForEvent("death", function(inst, data)
         if math.random() > TUNING.MOON_ENCHANT_BASE_DROP_CHANCE then return end
         local enchant_id = PickFromPool()
@@ -90,6 +91,7 @@ AddPrefabPostInit("butterfly", function(inst)
     if not GLOBAL.TheWorld.ismastersim then return end
     if not GLOBAL.MOON_CFG or not GLOBAL.MOON_CFG.ENABLE_MORE_ENCHANTS then return end
     if not GLOBAL.Moon_IsHHEnabled or not GLOBAL.Moon_IsHHEnabled() then return end
+    if not GLOBAL.MOON_CFG.ENABLE_SIMPLE_LOOT then return end
     inst:ListenForEvent("death", function(inst, data)
         if math.random() > 0.001 then return end
         local enchant_id = math.random(2) == 1 and "Legend_XIAOHUDIE" or "Legend_HUFEI"
@@ -142,6 +144,7 @@ local function ItemHasEnchant(item, enchant_id)
 end
 
 local function GiveEnchantStone(owner, enchant_id)
+    if not GLOBAL.MOON_CFG.ENABLE_SIMPLE_LOOT then return end
     local cfg = USE_TIME_DROPS[enchant_id]
     local ok, stone = _G.pcall(_G.HHSpawnStoneById, enchant_id)
     if not (ok and stone) then return end
