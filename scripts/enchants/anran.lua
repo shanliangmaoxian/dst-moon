@@ -1,6 +1,9 @@
 -- 小月亮 附魔：安燃
 -- 每次攻击生成 2 个火焰宝珠环绕自身（上限 8），每宝珠 +5% 攻速（HH atk_speed）
 -- 火焰光环：每 2 秒对周围敌人造成 5 点/珠真伤；受击时宝珠齐射反击攻击者
+-- 光环与反击都不伤友方单位（格罗姆/切斯特/哈奇/小动物宠物/驯服坐骑/阿比盖尔等）、
+--           不伤建筑（蜘蛛巢/蜂巢/杀人蜂巢/猎犬丘/石虾巢/沙袋/投石机等）与小动物，
+--           也不伤被收纳（背包/箱子/手持）的生物
 -- 灵魂烈焰：被命中目标 5 秒内受到的所有伤害翻倍（包 health.DoDelta，wdsn 同款策略）
 -- 贯通真伤：攻击固定造成 100 + 1% 目标最大生命值伤害（DoHHDelta 官方真伤通道，
 --           无视护甲/减伤/免伤；命中才触发=天然无视闪避；格挡不减免）
@@ -139,6 +142,37 @@ local function IsStored(ent)
 end
 
 -- =========================================================
+-- 光环自动伤害的排除判据（安燃 / 胖虎 / 良弓藏 三处保持同一套）
+-- 沿用本项目已有约定（qiangwei.lua 冰爆、malatutou.lua 假身 AoE 的 canttags 就是这一套），
+-- 只补两个它们漏了的：
+--   FRIENDLY_TAGS
+--     friendly      → 本项目自己的召唤物（麻辣兔头假身、养猫客浣猫）打的标记
+--     companion     → 切斯特/哈奇、小动物宠物、驯服坐骑、伯尼、阿比盖尔等原版伙伴
+--     noauradamage  → 原版 aura.lua 的"免疫光环伤害"标记（切斯特、哈奇、小动物宠物等）
+--     glommer       → 格罗姆。它只在跟着「格罗姆花」时才带 companion
+--                     （glommer.lua OnStartFollowing），野生/没花的得单独兜
+--   PROTECTED_TAGS
+--     wall/structure→ 墙、蜘蛛巢、蜂巢、杀人蜂巢、猎犬丘、石虾巢、沙袋、薇诺娜投石机等。
+--                     这些带 structure 又带 combat，会被 FindEntities 命中，
+--                     不排除就会把玩家的资源（蜘蛛巢产丝、蜂巢产蜜）顺手拆了
+--     prey/butterfly→ 兔子/鼹鼠/蝴蝶等小动物，光环不该顺手烧死（胖虎的描述就是"吓跑"）
+-- ⚠️ 不能拿 hostile 当"这是敌人"的判据——蜘蛛巢、石虾巢自己就带 hostile。
+-- =========================================================
+local FRIENDLY_TAGS = { "friendly", "companion", "noauradamage", "glommer" }
+local PROTECTED_TAGS = { "wall", "structure", "prey", "butterfly" }
+
+-- 是否友方单位（给"玩家主动攻击 / 被攻击"这类按实体判断的地方用）
+local function IsFriendly(ent)
+    return ent:HasAnyTag(FRIENDLY_TAGS)
+end
+
+-- FindEntities 的 canttags：装饰/无效实体 + 玩家 + 友方单位 + 建筑小动物。
+-- 放 canttags 里让引擎层先筛掉，比取回来再在循环里判快。
+local AOE_CANT_TAGS = { "INLIMBO", "FX", "NOCLICK", "DECOR", "playerghost", "player" }
+for _, t in ipairs(FRIENDLY_TAGS) do AOE_CANT_TAGS[#AOE_CANT_TAGS + 1] = t end
+for _, t in ipairs(PROTECTED_TAGS) do AOE_CANT_TAGS[#AOE_CANT_TAGS + 1] = t end
+
+-- =========================================================
 -- 灵魂烈焰：目标受伤翻倍（限时标记 + health.DoDelta 包装，wdsn 同款不解包策略）
 -- =========================================================
 local function ApplySoulflame(target)
@@ -211,13 +245,13 @@ AddPrefabPostInit("world", function(inst)
                     if owner.components.health and owner.components.health:IsDead() then return end
                     local total = owner._anran_orb_count * ORB_AOE_DMG
                     local x, y, z = owner.Transform:GetWorldPosition()
-                    -- 排除 FX/NOCLICK 等装饰实体（胖虎、良弓藏同款），只处理真正能打的战斗单位
-                    local victims = _G.TheSim:FindEntities(x, y, z, AOE_RADIUS, { "_combat" },
-                        { "INLIMBO", "FX", "NOCLICK", "DECOR", "playerghost" })
+                    -- 排除 FX/NOCLICK 等装饰实体、友方单位与建筑（胖虎、良弓藏同款思路），
+                    -- 只处理真正能打的敌对战斗单位
+                    local victims = _G.TheSim:FindEntities(x, y, z, AOE_RADIUS, { "_combat" }, AOE_CANT_TAGS)
                     for _, v in ipairs(victims) do
                         if v:IsValid() and not v:HasTag("player")
                                 and v.components.health and not v.components.health:IsDead()
-                                and not IsStored(v) then
+                                and not IsStored(v) and not IsFriendly(v) then
                             ApplySoulflame(v)
                             if v.components.health.DoHHDelta then
                                 -- cause 传 nil：HH 的 DoHHDelta 会把字符串 cause 飘字（SpawnClientStrFx），屏蔽
@@ -235,7 +269,8 @@ AddPrefabPostInit("world", function(inst)
                     local target = data and data.target
                     if not target or not target:IsValid() then return end
                     local health = target.components.health
-                    if health and not health:IsDead() then
+                    -- 友方单位不产生任何伤害/灵魂烈焰/宝珠（玩家误砍自己的伙伴时不该掉血）
+                    if health and not health:IsDead() and not IsFriendly(target) then
                         -- 生成宝珠（上限 8）
                         if (owner._anran_orb_count or 0) < ORB_MAX then
                             owner._anran_orb_count = math.min(ORB_MAX,
@@ -269,6 +304,7 @@ AddPrefabPostInit("world", function(inst)
                     if not attacker or not attacker:IsValid() then return end
                     if attacker:HasTag("player") then return end
                     if IsStored(attacker) then return end -- 收纳中的生物不参与战斗（同上）
+                    if IsFriendly(attacker) then return end -- 友方单位不反击（同上）
                     local hp = attacker.components.health
                     if not hp or hp:IsDead() then return end
                     ApplySoulflame(attacker)

@@ -1,8 +1,26 @@
--- Legend_LIANGGONG.lua
+-- 小月亮 附魔：良弓藏
+-- 自身伤害 -1000%，每 30 秒自动射箭攻击最近敌人（300% 伤害）
+-- 不打友方单位（格罗姆/切斯特/小动物宠物/驯服坐骑等）、建筑（蜘蛛巢/蜂巢等）、
+-- 小动物（兔子/蝴蝶等），也不打被收纳（背包/箱子/手持）的生物与自己的跟随者
+
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
 
 if not CFG.ENABLE_MORE_ENCHANTS then return end
+
+-- 自动射箭的排除判据（与安燃、胖虎保持同一套，完整说明见 anran.lua）：
+--   友方 = friendly / companion / noauradamage / glommer
+--   建筑与小动物 = wall / structure / prey / butterfly
+local FRIENDLY_TAGS = { "friendly", "companion", "noauradamage", "glommer" }
+local PROTECTED_TAGS = { "wall", "structure", "prey", "butterfly" }
+
+local function IsFriendly(ent)
+    return ent:HasAnyTag(FRIENDLY_TAGS)
+end
+
+local function IsProtected(ent)
+    return ent:HasAnyTag(PROTECTED_TAGS)
+end
 
 AddPrefabPostInit("world", function()
 
@@ -60,6 +78,8 @@ AddPrefabPostInit("world", function()
                     and not v.components.health:IsDead()
                     and v.components.combat
                     and not v:HasTag("player")
+                    and not IsFriendly(v)
+                    and not IsProtected(v)
                     then
 
                         local inv=v.components.inventoryitem
