@@ -91,7 +91,7 @@ modimport("scripts/enchants/mx_health")
 modimport("scripts/enchants/fqcd_sanity")
 modimport("scripts/enchants/myxl_level")
 modimport("scripts/enchants/yzdx")
-modimport("scripts/enchants/wuyang")    -- 无漾：雨露驱动生存（伤害抵扣+护盾水爆）
+modimport("scripts/enchants/wuyang")    -- 无漾：雨露上限翻倍+伤害抵扣+踏水+防雷+三维回复+移速
 modimport("scripts/enchants/wywq")
 modimport("scripts/enchants/jdd")
 modimport("scripts/enchants/lanqiu")

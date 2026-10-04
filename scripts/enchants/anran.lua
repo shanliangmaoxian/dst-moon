@@ -129,6 +129,15 @@ local function ClearOrbs(owner)
     SetOrbAtkSpeed(owner, 0)
 end
 
+--是否被"收纳"中：装进物品栏/箱子，或被手持。
+--收纳中的生物和玩家坐标完全重合，必然落在光环范围内，不排除会被无差别烧死
+--（身上/箱子里的动物）；而且它们本来就不参与战斗，没有理由吃伤害。
+--判据与胖虎、良弓藏一致，组件侧 moon_mob_enhance:IsStored 也是同一套。
+local function IsStored(ent)
+    local inv = ent.components.inventoryitem
+    return inv ~= nil and (inv.owner ~= nil or (inv.IsHeld and inv:IsHeld()))
+end
+
 -- =========================================================
 -- 灵魂烈焰：目标受伤翻倍（限时标记 + health.DoDelta 包装，wdsn 同款不解包策略）
 -- =========================================================
@@ -177,6 +186,7 @@ AddPrefabPostInit("world", function(inst)
         name = "安燃",
         client_text = "安燃",
         desc = "每次攻击+2宝珠环绕（上限8），每珠+5%攻速\n光环2秒/跳5点/珠真伤，受击齐射，命中附带灵魂烈焰（5秒受伤翻倍）\n贯通真伤" .. TRUE_BASE .. "+1%目标最大生命；吸血1%自身最大生命",
+        check_desc = "火羽焚天！",
         can_add = false,
         only_one = true,
         is_special = false,
@@ -194,15 +204,20 @@ AddPrefabPostInit("world", function(inst)
 
                 StartOrbitTask(owner)
 
-                -- 环绕光圈自动攻击：每 2 秒对周围敌人造成 10 点/珠真伤 + 灵魂烈焰
+                -- 环绕光圈自动攻击：每 2 秒对周围敌人造成 5 点/珠真伤 + 灵魂烈焰
                 owner._anran_aoe_task = owner:DoPeriodicTask(AOE_PERIOD, function()
                     if not owner:IsValid() or (owner._anran_orb_count or 0) <= 0 then return end
+                    if not _G.Moon_HasEffect(owner, EFFECT_KEY) then return end
                     if owner.components.health and owner.components.health:IsDead() then return end
                     local total = owner._anran_orb_count * ORB_AOE_DMG
                     local x, y, z = owner.Transform:GetWorldPosition()
-                    for _, v in ipairs(_G.TheSim:FindEntities(x, y, z, AOE_RADIUS, { "_combat" })) do
+                    -- 排除 FX/NOCLICK 等装饰实体（胖虎、良弓藏同款），只处理真正能打的战斗单位
+                    local victims = _G.TheSim:FindEntities(x, y, z, AOE_RADIUS, { "_combat" },
+                        { "INLIMBO", "FX", "NOCLICK", "DECOR", "playerghost" })
+                    for _, v in ipairs(victims) do
                         if v:IsValid() and not v:HasTag("player")
-                                and v.components.health and not v.components.health:IsDead() then
+                                and v.components.health and not v.components.health:IsDead()
+                                and not IsStored(v) then
                             ApplySoulflame(v)
                             if v.components.health.DoHHDelta then
                                 -- cause 传 nil：HH 的 DoHHDelta 会把字符串 cause 飘字（SpawnClientStrFx），屏蔽
@@ -253,6 +268,7 @@ AddPrefabPostInit("world", function(inst)
                     local attacker = data and data.attacker
                     if not attacker or not attacker:IsValid() then return end
                     if attacker:HasTag("player") then return end
+                    if IsStored(attacker) then return end -- 收纳中的生物不参与战斗（同上）
                     local hp = attacker.components.health
                     if not hp or hp:IsDead() then return end
                     ApplySoulflame(attacker)
