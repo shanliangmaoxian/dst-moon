@@ -61,6 +61,7 @@ AddPrefabPostInit("world", function(inst)
     -- 不在 GLOBAL 里；读 GLOBAL.HH_EQUIP_BUFF_LIST 会触发 strict.lua 报错，
     -- 必须像其他文件一样裸引用。
     if not tiers or not HH_EQUIP_BUFF_LIST then return end
+    if not GLOBAL.MOON_CFG.ENABLE_PREFIX_DISPLAY then return end
 
     for effect_id, config in pairs(HH_EQUIP_BUFF_LIST) do
         if type(config) == "table" and not is_recipe_alias(effect_id) then

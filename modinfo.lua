@@ -1,7 +1,7 @@
 name = "小月亮 (Little Moon)"
 description = "提取自特定Mod的召唤功能：小月亮按钮及召唤面板"
 author = "九月"
-version = "1.20.8"
+version = "1.20.9"
 api_version = 10
 priority = -1
 dst_compatible = true
@@ -726,6 +726,18 @@ configuration_options = {
     {
         name = "ENABLE_SIMPLE_LOOT",
         label = "启用简单获取附魔",
+        hover = "-",
+        options = {
+            { description = "启用", data = true },
+            { description = "禁用", data = false },
+        },
+        default = true,
+    },
+
+    AddTitle("显示设置"),
+    {
+        name = "ENABLE_PREFIX_DISPLAY",
+        label = "启用前缀显示",
         hover = "-",
         options = {
             { description = "启用", data = true },
