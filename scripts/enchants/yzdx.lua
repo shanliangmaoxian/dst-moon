@@ -1,6 +1,6 @@
 -- 小月亮 附魔：一枝独秀
--- 1%最大生命真伤(穿透护甲与防御层减伤)、8%吸血、50%暴击效果、10%暴击率
--- 周围15码内没有队友时，以上效果翻倍
+-- 周围15码内没有队友时：+40%伤害、+20%移速，但受到的伤害+25%
+-- 有队友时无任何效果（孤胆双刃：越独立越强，也越危险）
 
 local _G = GLOBAL
 local CFG = GLOBAL.MOON_CFG
@@ -13,8 +13,8 @@ AddPrefabPostInit("world", function(inst)
     GLOBAL.AddSpecialEquipEffect("Legend_YZDX", {
         name = "一枝独秀",
         client_text = "一枝\n独秀",
-        desc = "1%最大生命真伤+8%吸血+50%暴击效果+10%暴击率\n周围无队友时效果翻倍",
-        check_desc = "一枝独秀，傲视群雄！\n周围15码内无队友时效果翻倍",
+        desc = "周围15码内无队友时：\n+60%伤害、+30%移速\n但受到的伤害+25%",
+        check_desc = "一枝独秀，傲视群雄！\n孤身作战更强，但也更危险",
         can_add = false,
         only_one = true,
         is_special = false,
@@ -33,90 +33,66 @@ AddPrefabPostInit("world", function(inst)
                     local x, y, z = owner.Transform:GetWorldPosition()
                     local is_solo = true
                     for _, v in ipairs(GLOBAL.AllPlayers) do
-                        if v:IsValid() then
-                            -- 检测附近队友
-                            if is_solo and v ~= owner and v:GetDistanceSqToPoint(x, y, z) < 225 then
-                                is_solo = false
-                            end
+                        if v:IsValid() and v ~= owner and v:GetDistanceSqToPoint(x, y, z) < 225 then
+                            is_solo = false
+                            break
                         end
                     end
                     owner._yzdx_cache_solo = is_solo
-                    owner._yzdx_cache_mult = is_solo and 2 or 1
                 end
 
-                -- 应用静态buff (吸血 + 暴击效果 + 暴击率)
+                -- 应用静态buff (伤害 + 移速)
                 owner._yzdx_applyBuffs = function()
                     if owner._yzdx_effect_applied then return end
                     local hh = owner.components.hh_player
                     if not hh then return end
-                    _G.pcall(owner._yzdx_refreshCache, owner)
-                    local mult = owner._yzdx_cache_mult or 1
-                    hh:AddEffectValueByKey("bloodSuck", 8 * mult)
-                    hh:AddEffectValueByKey("criticalHitEffect", 50 * mult)
-                    -- 自带暴击率：否则 HH 的暴击效果(需 criticalHitRate > 0)永远不触发
-                    hh:AddEffectValueByKey("criticalHitRate", 10 * mult)
+                    hh:AddEffectValueByKey("addComDamagePercent", 40)
+                    hh:AddEffectValueByKey("addSpeedPercent", 20)
                     owner._yzdx_effect_applied = true
-                    owner._yzdx_applied_mult = mult
                 end
 
                 owner._yzdx_removeBuffs = function()
                     if not owner._yzdx_effect_applied then return end
                     local hh = owner.components.hh_player
                     if not hh then return end
-                    local mult = owner._yzdx_applied_mult or 1
-                    hh:ReduceEffectValueByKey("bloodSuck", 8 * mult)
-                    hh:ReduceEffectValueByKey("criticalHitEffect", 50 * mult)
-                    hh:ReduceEffectValueByKey("criticalHitRate", 10 * mult)
+                    hh:ReduceEffectValueByKey("addComDamagePercent", 40)
+                    hh:ReduceEffectValueByKey("addSpeedPercent", 20)
                     owner._yzdx_effect_applied = false
-                    owner._yzdx_applied_mult = nil
+                end
+
+                -- 受到伤害+25%：包装本实例的 GetBlockDamage（HH 受击结算入口，
+                -- hh_api.lua 的 combat GetAttacked 钩子调用其返回值直接进原版扣血），
+                -- 仅在 solo 时对 owner 自己生效。乘法层写法参考 jieshen/ji 先例。
+                local hh = owner.components.hh_player
+                if hh and not hh._yzdx_gbd_wrapped then
+                    hh._yzdx_gbd_wrapped = true
+                    local old_gbd = hh.GetBlockDamage
+                    hh._yzdx_orig_gbd = old_gbd
+                    hh.GetBlockDamage = function(self, player, attacker, amount)
+                        local dmg = old_gbd(self, player, attacker, amount)
+                        if player == owner and owner._yzdx_cache_solo
+                                and _G.Moon_HasEffect(owner, "yzdx") then
+                            dmg = dmg * 1.25
+                        end
+                        return dmg
+                    end
                 end
 
                 owner._yzdx_refreshBuffs = function()
                     if not _G.Moon_HasEffect(owner, "yzdx") then return end
-                    owner._yzdx_removeBuffs()
-                    owner._yzdx_applyBuffs()
-                end
-
-                -- 攻击时触发 1%最大生命真伤（使用缓存，不遍历 AllPlayers）
-                owner._yzdx_attack_handler = function(attacker, data)
-                    if not _G.Moon_HasEffect(owner, "yzdx") then return end
-                    local target = data and data.target
-                    if not target or not target:IsValid() then return end
-                    local health = target.components.health
-                    if not health or health:IsDead() then return end
-
-                    local mult = owner._yzdx_cache_mult or 1
-                    local max_hp = health.maxhealth or 100
-                    local dmg = max_hp * 0.01 * mult
-
-                    -- 1%最大生命真伤：优先走 HH 官方真伤（SetVal 直写，穿透护甲与怪物强化
-                    -- 防御层减伤，且带击杀归属/掉落兼容），无 DoHHDelta 时回退普通扣血。
-                    -- 写法与 fay.lua / epsilon.lua 的真伤分支一致。
-                    if health.DoHHDelta then
-                        health:DoHHDelta(-dmg, owner, nil)
-                    else
-                        health:DoDelta(-dmg, false, nil)
-                    end
-                end
-                owner:ListenForEvent("onattackother", owner._yzdx_attack_handler)
-
-                -- 周期性更新缓存与buff（每3秒）
-                owner._yzdx_periodicUpdate = function()
-                    if not _G.Moon_HasEffect(owner, "yzdx") then return end
-                    local hh = owner.components.hh_player
-                    if not hh then return end
-
-                    -- 刷新缓存（独狼判定）并同步吸血/增强buff
                     _G.pcall(owner._yzdx_refreshCache, owner)
-                    owner._yzdx_refreshBuffs()
+                    if owner._yzdx_cache_solo then
+                        owner._yzdx_applyBuffs()
+                    else
+                        owner._yzdx_removeBuffs()
+                    end
                 end
 
                 -- 初始应用
-                owner._yzdx_applyBuffs()
-                owner._yzdx_periodicUpdate()
+                owner._yzdx_refreshBuffs()
 
-                -- 每3秒检测
-                owner._yzdx_check_task = owner:DoPeriodicTask(3, owner._yzdx_periodicUpdate)
+                -- 每3秒检测队友
+                owner._yzdx_check_task = owner:DoPeriodicTask(3, owner._yzdx_refreshBuffs)
             end
         end,
         un_equip_fn = function(inst, owner, value)
@@ -126,14 +102,18 @@ AddPrefabPostInit("world", function(inst)
                     owner._yzdx_check_task:Cancel()
                     owner._yzdx_check_task = nil
                 end
-                if owner._yzdx_attack_handler then
-                    owner:RemoveEventCallback("onattackother", owner._yzdx_attack_handler)
-                    owner._yzdx_attack_handler = nil
-                end
                 if owner._yzdx_removeBuffs then
                     owner._yzdx_removeBuffs()
                 end
+                -- 还原 GetBlockDamage 包装
+                local hh = owner.components.hh_player
+                if hh and hh._yzdx_gbd_wrapped and hh._yzdx_orig_gbd then
+                    hh.GetBlockDamage = hh._yzdx_orig_gbd
+                    hh._yzdx_orig_gbd = nil
+                    hh._yzdx_gbd_wrapped = nil
+                end
                 owner._yzdx_effect_applied = nil
+                owner._yzdx_cache_solo = nil
                 owner._yzdx_inited = nil
             end
         end,
