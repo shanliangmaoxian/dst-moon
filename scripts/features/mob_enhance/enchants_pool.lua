@@ -24,6 +24,19 @@ local function IsValidTarget(inst, target)
         and not target.components.health:IsDead()
 end
 
+-- 范围伤害的合法敌对目标判定（供 FindNearestEnemy 过滤）
+-- 玩家/同伴永远算敌人；同类（prefab 相同）不打，防止附魔怪持续群伤互相磨死；
+-- 中立生物（牛/兔人等，无 hostile/monster 标签）不打；其余敌对怪算敌人
+local function IsHostileTarget(inst, target)
+    if target:HasTag("player") or target:HasTag("companion") then
+        return true
+    end
+    if target.prefab == inst.prefab then
+        return false
+    end
+    return target:HasTag("hostile") or target:HasTag("monster")
+end
+
 -- 统一附魔伤害出口（damage_utils.lua 提供，含死亡之舞兼容限流）
 local DealDamage = _G.Moon_MobEnhanceDealDamage
 
@@ -42,7 +55,7 @@ local function FindNearestEnemy(inst, radius)
     local closest, closest_dist = nil, math.huge
     local x, y, z = inst.Transform:GetWorldPosition()
     for _, e in ipairs(enemies) do
-        if IsValidTarget(inst, e) then
+        if IsValidTarget(inst, e) and IsHostileTarget(inst, e) then
             local ex, ey, ez = e.Transform:GetWorldPosition()
             local dist = (x - ex)^2 + (z - ez)^2
             if dist < closest_dist then
