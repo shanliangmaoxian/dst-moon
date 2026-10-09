@@ -35,16 +35,15 @@ AddPrefabPostInit("world", function(inst)
                     if owner._wywq_meditating then return end
                     owner._wywq_meditating = true
 
-                    -- 减伤80% 通过 combat 外部修正
+                    -- 减伤95%：SourceModifierList 的 source 不能为 nil（nil 会被静默忽略导致无效）
                     if owner.components.combat then
-                        if not owner.components.combat.externaldamagetakenmultipliers then
-                            -- 确保表存在
-                            owner.components.combat.externaldamagetakenmultipliers = {}
-                        end
-                        owner.components.combat.externaldamagetakenmultipliers:SetModifier(nil, 0.2)
+                        owner.components.combat.externaldamagetakenmultipliers:SetModifier("wywq", 0.2)
                     end
 
-                    -- 移除仇恨标签
+                    -- 免疫仇恨：notarget 标签让怪物重选目标时忽略玩家
+                    owner:AddTag("notarget")
+
+                    -- 清掉玩家自己的攻击目标
                     if owner.components.combat then
                         owner._wywq_old_target = owner.components.combat.target
                         owner.components.combat:SetTarget(nil)
@@ -87,8 +86,11 @@ AddPrefabPostInit("world", function(inst)
 
                     -- 移除减伤
                     if owner.components.combat and owner.components.combat.externaldamagetakenmultipliers then
-                        owner.components.combat.externaldamagetakenmultipliers:RemoveModifier(nil)
+                        owner.components.combat.externaldamagetakenmultipliers:RemoveModifier("wywq")
                     end
+
+                    -- 恢复可被仇恨
+                    owner:RemoveTag("notarget")
 
                     -- 停止回血
                     if owner._wywq_regen_task then
@@ -149,11 +151,11 @@ AddPrefabPostInit("world", function(inst)
                     owner._wywq_regen_task:Cancel()
                     owner._wywq_regen_task = nil
                 end
-                if owner._wywq_meditating then
-                    if owner.components.combat and owner.components.combat.externaldamagetakenmultipliers then
-                        owner.components.combat.externaldamagetakenmultipliers:RemoveModifier(nil)
-                    end
+                -- 兜底清干净减伤与 notarget（不依赖禅定状态，防止残留）
+                if owner.components.combat and owner.components.combat.externaldamagetakenmultipliers then
+                    owner.components.combat.externaldamagetakenmultipliers:RemoveModifier("wywq")
                 end
+                owner:RemoveTag("notarget")
                 owner._wywq_meditating = false
                 owner._wywq_idle_time = 0
                 owner._wywq_last_pos = nil
