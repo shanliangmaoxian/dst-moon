@@ -335,7 +335,75 @@ local function combine_items_to_ingredients(ingredients, type, items)
     return ingredients
 end
 
+-- ------------------------------------------------------------------
+-- RemoveIngredients 快速路径
+-- 原版 builder.lua:546 按"个"扣料：每 1 个材料走一次
+-- Inventory:RemoveItem(k, false, true) → stackable:Get() → SpawnPrefab + Remove()。
+-- 原版配方单种材料最多 40（一叠上限）无感知；商店批量兑换（如 500 金搓寻宝卷轴）
+-- 会在单帧内 SpawnPrefab/Remove 500 个网络实体造成卡顿。
+-- 当单个物品需扣数量超过其堆叠上限（原版不可能出现）时，改按"叠"批量扣：
+-- 整叠 RemoveItem(item, true)，部分扣 stackable:Get(n) 一次拆出再删。
+-- 尾段（角色材料扣血/扣魔 + consumeingredients 事件）用空材料表走原函数兜底，
+-- 外层的幸运橙汁免材料 / 魔力扣费等包装链不受影响。
+-- ------------------------------------------------------------------
+local function BatchRemoveStack(inventory, item, num)
+    if item == nil or num == nil or num <= 0 or not item:IsValid() then
+        return
+    end
+    local stackable = item.components ~= nil and item.components.stackable or nil
+    if stackable == nil or num >= stackable:StackSize() then
+        -- 非堆叠 / 需扣数 ≥ 现有数量：整件移除
+        -- （等价于原版逐个拆到最后一叠时 Get() 返回本体并 Remove）
+        local removed = inventory:RemoveItem(item, true)
+        if removed ~= nil then
+            if removed.components ~= nil and removed.components.container ~= nil then
+                removed.components.container:DropEverything(inventory.inst:GetPosition())
+            end
+            removed:Remove()
+        end
+    else
+        -- 部分扣：一次拆出 num 个（单个实体）再删，替代原版 num 次 Get(1)+Remove
+        local dec = stackable:Get(num)
+        if dec ~= nil then
+            if dec.components ~= nil and dec.components.inventoryitem ~= nil then
+                dec.components.inventoryitem:OnRemoved()
+            end
+            dec:Remove()
+        end
+    end
+end
+
+local function NeedFastRemove(ingredients)
+    for item, ents in pairs(ingredients) do
+        for k, v in pairs(ents) do
+            local maxsize = k.components ~= nil and k.components.stackable ~= nil
+                and k.components.stackable.maxsize or 1
+            if v > maxsize then
+                return true
+            end
+        end
+    end
+    return false
+end
+
 AddComponentPostInit("builder", function(self)
+    local _old_RemoveIngredients = self.RemoveIngredients
+    function self:RemoveIngredients(ingredients, recname, discounted)
+        local inventory = self.inst ~= nil and self.inst.components ~= nil
+            and self.inst.components.inventory or nil
+        if not self.freebuildmode and inventory ~= nil
+                and type(ingredients) == "table" and NeedFastRemove(ingredients) then
+            for item, ents in pairs(ingredients) do
+                for k, v in pairs(ents) do
+                    BatchRemoveStack(inventory, k, v)
+                end
+            end
+            -- 空材料表：原版跳过逐个扣料循环，只处理角色材料 + 推 consumeingredients 事件
+            return _old_RemoveIngredients(self, {}, recname, discounted)
+        end
+        return _old_RemoveIngredients(self, ingredients, recname, discounted)
+    end
+
     function self:HasIngredients(recipe)
         if type(recipe) == "string" then
             recipe = GetValidRecipe(recipe)
