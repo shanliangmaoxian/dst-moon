@@ -61,6 +61,7 @@ modimport("scripts/moon_global_utils/recipe")
 -- 2. 功能模块 (各文件内部根据配置决定是否启用)
 -- ------------------------------------------------------------------
 modimport("scripts/features/hh_enchant_expand") -- 通用附魔机制拓展
+modimport("scripts/features/hh_drop_rate")     -- HH 极品附魔石爆率调整（需附魔强化 mod）
 modimport("scripts/features/anti_packing")
 modimport("scripts/features/loot_limiter")
 modimport("scripts/features/treasure")

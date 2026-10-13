@@ -288,6 +288,33 @@ configuration_options = {
         options = { {description = "在服务器mod配置中添加", data = {}} },
         default = {},
     },
+    {
+        name = "HH_ELITE_STONE_RATE",
+        label = "极品附魔石爆率·精英",
+        hover = "精英怪死亡掉落极品附魔石的概率（附魔强化mod默认 5%）。\n选\"跟随默认\"则不修改，需开启附魔强化mod",
+        options = {
+            { description = "跟随默认", data = 0 },
+            { description = "5%（默认）", data = 0.05 },
+            { description = "10%", data = 0.1 },
+            { description = "20%", data = 0.2 },
+            { description = "50%", data = 0.5 },
+            { description = "100%", data = 1 },
+        },
+        default = 0,
+    },
+    {
+        name = "HH_BOSS_STONE_RATE",
+        label = "极品附魔石爆率·boss",
+        hover = "boss死亡掉落极品附魔石的概率（附魔强化mod默认 20%）。\n选\"跟随默认\"则不修改，需开启附魔强化mod",
+        options = {
+            { description = "跟随默认", data = 0 },
+            { description = "20%（默认）", data = 0.2 },
+            { description = "30%", data = 0.3 },
+            { description = "50%", data = 0.5 },
+            { description = "100%", data = 1 },
+        },
+        default = 0,
+    },
 
     AddTitle("欧皇模拟器清理组件"),
     {
