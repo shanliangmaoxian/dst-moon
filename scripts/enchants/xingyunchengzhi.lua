@@ -1,5 +1,5 @@
 -- 小月亮 附魔：幸运橙汁 (#31)
--- 获取：#roll 掷骰子，连续两次80+获得（冷却10秒，期望~25次）
+-- 获取：#roll 掷骰子，连续两次86+获得（冷却10秒，期望~51次，约8-9分钟挂机）
 -- 效果：掉落/采集/收锅/制作30%，击杀额外掉落30%，幸运值+10
 
 local _G = GLOBAL
@@ -81,7 +81,7 @@ AddPrefabPostInit("world", function(inst)
         name = "幸运橙汁",
         client_text = "幸运\n橙汁",
         desc = "幸运女神的眷顾！\n击杀/采集/收锅/制作30%额外奖励，幸运值+10",
-        check_desc = "聊天输入 #roll 掷骰子，连续两次80+即可获得",
+        check_desc = "聊天输入 #roll 掷骰子，连续两次86+即可获得",
         can_add = false,
         only_one = true,
         is_special = true, -- 专属获取：从 HH 掉落池(普通/优质/稀有)中排除，打宝藏怪也不掉
@@ -242,12 +242,12 @@ function _G.Moon_DoDiceRoll(player)
     -- 广播骰子结果（供其他附魔/系统监听，如：无意识的恋恋 roll出5和14）
     player:PushEvent("moon_dice_roll", { value = roll })
 
-    if last_roll >= 80 and roll >= 80 then
+    if last_roll >= 86 and roll >= 86 then
         local success, stone = _G.pcall(_G.HHSpawnStoneById, "Legend_XYCZ")
         if success and stone and player.components.inventory then
             player.components.inventory:GiveItem(stone, nil, player:GetPosition())
             if player.components.talker then
-                player.components.talker:Say("恭喜！连续两次80+！获得幸运橙汁附魔石！")
+                player.components.talker:Say("恭喜！连续两次86+！获得幸运橙汁附魔石！")
             end
         end
         player._xycz_last_roll_value = 0
@@ -257,8 +257,8 @@ function _G.Moon_DoDiceRoll(player)
     else
         player._xycz_last_roll_value = roll
         if player.components.talker then
-            if roll >= 80 then
-                player.components.talker:Say("掷出" .. roll .. "点！80以上！再掷一次80+就能获得幸运橙汁！")
+            if roll >= 86 then
+                player.components.talker:Say("掷出" .. roll .. "点！86以上！再掷一次86+就能获得幸运橙汁！")
             else
                 player.components.talker:Say("掷出" .. roll .. "点")
             end
