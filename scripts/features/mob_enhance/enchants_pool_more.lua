@@ -379,7 +379,7 @@ _G.MOON_MOB_ENCHANTS_MORE = {
                 end
             end
             tick()
-            SpawnFX("bloodsplash", target.Transform:GetWorldPosition())
+            -- SpawnFX("bloodsplash", target.Transform:GetWorldPosition())
         end,
     },
 
