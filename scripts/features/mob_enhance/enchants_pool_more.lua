@@ -609,7 +609,7 @@ _G.MOON_MOB_ENCHANTS_MORE = {
                 if nearest then
                     DealDamage(inst, nearest, dmg, "mob_corpse")
                 end
-                SpawnFX("explode", inst.Transform:GetWorldPosition())
+                -- SpawnFX("explode", inst.Transform:GetWorldPosition())
             end)
         end,
     },
