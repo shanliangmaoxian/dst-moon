@@ -28,7 +28,7 @@ end
 
 local filter_list = has_filter and { "MOON_SHOP" } or nil
 
-local hh_enabled = _G.Moon_IsModEnabled("workshop-3096210166")
+local hh_enabled = _G.Moon_IsHHEnabled()
 local soul_exchange_enabled = _G.Moon_IsModEnabled("workshop-2526778484")
 local hoshino_enabled = _G.Moon_IsModEnabled("workshop-3398290914")
 local legend_enabled = _G.Moon_IsModEnabled("workshop-2578692071")
@@ -209,7 +209,7 @@ local function InitMoonShop()
         end
     end
 
-    -- 遍历之迹兑换 (需要 HH 附魔 3096210166 + 小鸟 3398290914)
+    -- 遍历之迹兑换 (需要 HH 附魔 3096210166 / 3823289374 + 小鸟 3398290914)
     if CFG.ENABLE_MOON_SHOP_TRAVEL_TRACES and hh_enabled and hoshino_enabled then
         local travel_traces_id = "MoonShop_hoshino_item_travel_traces"
         if not (AllRecipes and AllRecipes[travel_traces_id]) then
@@ -224,7 +224,7 @@ local function InitMoonShop()
         end
     end
 
-    -- 寻宝卷轴兑换: 金子 → 寻宝卷轴 (需要 HH 附魔 3096210166)
+    -- 寻宝卷轴兑换: 金子 → 寻宝卷轴 (需要 HH 附魔 3096210166 / 3823289374)
     if CFG.ENABLE_MOON_SHOP_TREASURE_TALLY and hh_enabled then
         local tally_recipes = {
             { "hh_treasure_tally", 1,  50 },

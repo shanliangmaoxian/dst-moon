@@ -13,10 +13,11 @@ function _G.Moon_IsCCSEnabled()
     return _G.Moon_IsModEnabled("workshop-3043439883")
 end
 
--- 检测 HH 附魔框架是否启用
+-- 检测 HH 附魔框架是否启用（3096210166 原版 / 3709314660 / 3823289374 魔改版）
 function _G.Moon_IsHHEnabled()
     return _G.Moon_IsModEnabled("workshop-3096210166")
         or _G.Moon_IsModEnabled("workshop-3709314660")
+        or _G.Moon_IsModEnabled("workshop-3823289374")
 end
 
 -- 检测璇儿 Mod 是否启用

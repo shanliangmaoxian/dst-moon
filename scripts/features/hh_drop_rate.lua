@@ -20,7 +20,7 @@ local BOSS_RATE = to_rate(CFG.HH_BOSS_STONE_RATE)
 if ELITE_RATE <= 0 and BOSS_RATE <= 0 then return end
 
 AddPrefabPostInit("world", function(inst)
-    if not _G.Moon_IsModEnabled("workshop-3096210166") then return end
+    if not _G.Moon_IsHHEnabled() then return end
 
     local chance = _G.TUNING ~= nil and _G.TUNING.HH_CHANCE_CONFIG ~= nil
         and _G.TUNING.HH_CHANCE_CONFIG.GIF_CHANCE or nil
