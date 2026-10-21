@@ -2,6 +2,9 @@ local containers = require("containers")
 local Widget = require("widgets/widget")
 local assert_utils = require("moon_utils/asserts")
 
+local CFG = GLOBAL.MOON_CFG
+
+if not CFG.ENABLE_MORE_ENCHANTS then return end
 if not _G.Moon_IsHHEnabled() then return end
 
 local old_castspell_fn = GLOBAL.ACTIONS.CASTSPELL.fn
